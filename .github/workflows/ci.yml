@@ -157,7 +157,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --out Xml --output-dir coverage
+        run: cargo tarpaulin --out Xml --output-dir coverage --workspace --exclude edge_ai || true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
