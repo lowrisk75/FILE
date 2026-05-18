@@ -599,10 +599,8 @@ mod tests {
         block0.0[0] = 0x1234_5678_9ABC_DEF0;
         dag.push(block0.clone());
 
-        // Bloc 1: XOR inverse du bloc 0
-        let mut block1 = block0.xor(&block0); // = zero
-        block1.0[0] ^= block0.0[0]; // Annule l'effet
-        dag.push(block0.clone()); // Bloc 1 = copie de bloc 0
+        // Bloc 1: copie de bloc 0
+        dag.push(block0.clone());
 
         // Remplir le reste du DAG
         for i in 2..16 {

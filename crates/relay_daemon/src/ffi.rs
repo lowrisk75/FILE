@@ -302,7 +302,7 @@ mod tests {
                 cpu_load: 0.2,
             };
             let difficulty = capow_recommended_difficulty(&good_ctx);
-            assert!(difficulty >= 15 && difficulty <= 25);
+            assert!((15..=25).contains(&difficulty));
 
             // Low-trust user (low TTL, high CPU, bad ASN)
             let bad_ctx = NetworkContextFFI {
@@ -312,7 +312,7 @@ mod tests {
                 cpu_load: 0.9,
             };
             let difficulty = capow_recommended_difficulty(&bad_ctx);
-            assert!(difficulty >= 15 && difficulty <= 25);
+            assert!((15..=25).contains(&difficulty));
 
             // Default (no context)
             let default_difficulty = capow_recommended_difficulty(std::ptr::null());
