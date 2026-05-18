@@ -204,7 +204,7 @@ impl NoiseHandshake {
             pattern,
             local_ephemeral_secret: Some(ephemeral_keypair.private),
             local_static_secret: local_static.to_vec(),
-            remote_static_pub: remote_static_opt.map(|k| k.to_vec()),
+            _remote_static_pub: remote_static_opt.map(|k| k.to_vec()),
         })
     }
 
@@ -250,7 +250,7 @@ impl NoiseHandshake {
             pattern: IK_PATTERN,
             local_ephemeral_secret: None,
             local_static_secret: local_static.to_vec(),
-            remote_static_pub: None,
+            _remote_static_pub: None,
         })
     }
 
@@ -523,7 +523,7 @@ impl NoiseHandshake {
         Ok(Transport {
             cipher,
             tx_nonce: AtomicU64::new(0),
-            rx_nonce: AtomicU64::new(0),
+            _rx_nonce: AtomicU64::new(0),
         })
     }
 }
