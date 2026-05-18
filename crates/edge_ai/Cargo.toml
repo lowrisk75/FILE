@@ -5,10 +5,12 @@ edition = "2021"
 
 [dependencies]
 # Objective-C runtime FFI for private ANE API access (Tier 2 only)
+# Metal framework bindings for zero-copy GPU integration (Tier 2 only)
+# All of these are macOS/iOS only - don't pull these in on Linux/Windows
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
 objc = { version = "0.2", optional = true }
 objc-foundation = { version = "0.1", optional = true }
-
-# Metal framework bindings for zero-copy GPU integration (Tier 2 only)
 metal = { version = "0.30", optional = true }
 core-foundation = { version = "0.10", optional = true }
 
