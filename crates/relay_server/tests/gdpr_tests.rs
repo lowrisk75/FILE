@@ -165,11 +165,8 @@ fn test_hash_output_range() {
 
     let hash = hash_ip(&ip, &secret);
 
-    // Hash should be in valid u64 range (always true, but documents the type)
-    assert!(
-        hash >= u64::MIN && hash <= u64::MAX,
-        "Hash should be valid u64"
-    );
+    // Hash should be non-zero (verify actual hashing happened)
+    assert_ne!(hash, 0, "Hash should be non-zero");
 }
 
 #[test]
