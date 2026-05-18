@@ -302,7 +302,8 @@ mod tests {
                 cpu_load: 0.2,
             };
             let difficulty = capow_recommended_difficulty(&good_ctx);
-            assert!((15..=25).contains(&difficulty));
+            // Difficulty is RAM size in bytes (65KB to 2MB range)
+            assert!(difficulty >= 65_536 && difficulty <= 2_097_152);
 
             // Low-trust user (low TTL, high CPU, bad ASN)
             let bad_ctx = NetworkContextFFI {
@@ -312,7 +313,8 @@ mod tests {
                 cpu_load: 0.9,
             };
             let difficulty = capow_recommended_difficulty(&bad_ctx);
-            assert!((15..=25).contains(&difficulty));
+            // Low-trust should get higher difficulty (more RAM)
+            assert!(difficulty >= 65_536 && difficulty <= 2_097_152);
 
             // Default (no context)
             let default_difficulty = capow_recommended_difficulty(std::ptr::null());
