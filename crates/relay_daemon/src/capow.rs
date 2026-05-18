@@ -89,8 +89,8 @@ impl Block1024 {
     #[inline(always)]
     pub fn xor(&self, other: &Self) -> Self {
         let mut result = [0u64; BLOCK_SIZE_U64];
-        for i in 0..BLOCK_SIZE_U64 {
-            result[i] = self.0[i] ^ other.0[i];
+        for (i, (a, b)) in self.0.iter().zip(other.0.iter()).enumerate() {
+            result[i] = a ^ b;
         }
         Block1024(result)
     }
@@ -434,8 +434,8 @@ pub fn verify_gbp_solution(
     // 3. Vérification XOR cumulatif (auto-vectorisé en AVX2/AVX-512)
     let mut accumulator = [0u64; BLOCK_SIZE_U64];
     for block in &proof.extracted_blocks {
-        for i in 0..BLOCK_SIZE_U64 {
-            accumulator[i] ^= block.0[i];
+        for (acc, val) in accumulator.iter_mut().zip(block.0.iter()) {
+            *acc ^= val;
         }
     }
 

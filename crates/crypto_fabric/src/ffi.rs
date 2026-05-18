@@ -34,7 +34,7 @@ pub struct NoiseSession {
 /// Internal session state (either handshaking or transport mode)
 enum NoiseSessionReal {
     /// Handshake in progress
-    Handshake(NoiseHandshake),
+    Handshake(Box<NoiseHandshake>),
 
     /// Handshake complete, transport mode active
     Transport(Transport),
@@ -47,10 +47,10 @@ struct NoiseSessionWrapper {
     state: Mutex<Option<NoiseSessionReal>>,
 
     /// Local static key (32 bytes)
-    local_static: [u8; 32],
+    _local_static: [u8; 32],
 
     /// Remote static key (if known, for IK 0-RTT)
-    remote_static: Option<[u8; 32]>,
+    _remote_static: Option<[u8; 32]>,
 }
 
 // ============================================================================
@@ -103,9 +103,9 @@ pub unsafe extern "C" fn noise_create_initiator(
 
     // Wrap in session
     let wrapper = Box::new(NoiseSessionWrapper {
-        state: Mutex::new(Some(NoiseSessionReal::Handshake(handshake))),
-        local_static,
-        remote_static,
+        state: Mutex::new(Some(NoiseSessionReal::Handshake(Box::new(handshake)))),
+        _local_static: local_static,
+        _remote_static: remote_static,
     });
 
     *out_session = Box::into_raw(wrapper) as *mut NoiseSession;
@@ -141,9 +141,9 @@ pub unsafe extern "C" fn noise_create_responder(
 
     // Wrap in session
     let wrapper = Box::new(NoiseSessionWrapper {
-        state: Mutex::new(Some(NoiseSessionReal::Handshake(handshake))),
-        local_static,
-        remote_static: None,
+        state: Mutex::new(Some(NoiseSessionReal::Handshake(Box::new(handshake)))),
+        _local_static: local_static,
+        _remote_static: None,
     });
 
     *out_session = Box::into_raw(wrapper) as *mut NoiseSession;
@@ -199,7 +199,7 @@ pub unsafe extern "C" fn noise_handshake_write(
 
     // Get handshake (error if already in transport mode or None)
     let handshake = match state_guard.as_mut() {
-        Some(NoiseSessionReal::Handshake(hs)) => hs,
+        Some(NoiseSessionReal::Handshake(hs)) => hs.as_mut(),
         _ => return NoiseError::StateError as c_int,
     };
 
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn noise_handshake_read(
 
     // Get handshake
     let handshake = match state_guard.as_mut() {
-        Some(NoiseSessionReal::Handshake(hs)) => hs,
+        Some(NoiseSessionReal::Handshake(hs)) => hs.as_mut(),
         _ => return NoiseError::StateError as c_int,
     };
 
@@ -307,7 +307,7 @@ pub unsafe extern "C" fn noise_is_handshake_complete(session: *mut NoiseSession)
 
     // Extract handshake (take() replaces with None)
     let handshake = match state_guard.take() {
-        Some(NoiseSessionReal::Handshake(hs)) => hs,
+        Some(NoiseSessionReal::Handshake(hs)) => *hs,
         _ => return false,
     };
 

@@ -122,7 +122,7 @@ pub struct NoiseHandshake {
     ///
     /// - **Présente**: Pattern IK activé (0-RTT possible)
     /// - **Absente**: Pattern XX pur (1.5 RTT)
-    remote_static_pub: Option<Vec<u8>>,
+    _remote_static_pub: Option<Vec<u8>>,
 }
 
 impl NoiseHandshake {
@@ -590,7 +590,7 @@ pub struct Transport {
     /// - Bitfield sliding window (accepte out-of-order)
     /// - Track 64 derniers nonces reçus
     /// - Reject duplicates, accept gaps
-    rx_nonce: AtomicU64,
+    _rx_nonce: AtomicU64,
 }
 
 impl Transport {

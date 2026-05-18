@@ -226,7 +226,7 @@ pub fn process_header(raw_key: &[u8; 32]) -> Vec<Vec<u8>> {
     let shares: Vec<Share> = dealer.take(MPQUIC_TOTAL_PATHS as usize).collect();
 
     // Conversion des parts en Vec<u8> (via From trait)
-    shares.iter().map(|share| Vec::from(share)).collect()
+    shares.iter().map(Vec::from).collect()
 }
 
 /// Traitement du Bulk: Reed-Solomon erasure coding parallélisé
