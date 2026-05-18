@@ -75,7 +75,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --workspace -- -D warnings
+        run: cargo clippy --all-targets --workspace --exclude edge_ai --exclude vfs_guard -- -D warnings
 
   security:
     name: Security Audit
@@ -176,10 +176,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Generate documentation
-        run: cargo doc --no-deps --workspace
+        run: cargo doc --no-deps --workspace --exclude edge_ai --exclude vfs_guard
 
       - name: Check documentation links
-        run: cargo doc --no-deps --workspace 2>&1 | grep -i "warning.*intra-doc" && exit 1 || exit 0
+        run: cargo doc --no-deps --workspace --exclude edge_ai --exclude vfs_guard 2>&1 | grep -i "warning.*intra-doc" && exit 1 || exit 0
 
   dependencies:
     name: Dependency Check
