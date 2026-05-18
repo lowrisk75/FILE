@@ -5,7 +5,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'crates/relay_server/**'
-      - 'crates/capow/**'
+      - 'crates/relay_daemon/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/build-relay.yml'
@@ -48,10 +48,10 @@ jobs:
           key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test --package relay_server --package capow --verbose
+        run: cargo test --package relay_server --verbose
 
       - name: Run clippy
-        run: cargo clippy --package relay_server --package capow -- -D warnings
+        run: cargo clippy --package relay_server -- -D warnings
 
   build-linux:
     name: Build Linux (${{ matrix.target }})
