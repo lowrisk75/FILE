@@ -46,9 +46,13 @@ if git remote | grep -q origin; then
     exit 0
 fi
 
+# Get GitHub username
+GH_USER=$(gh api user -q .login)
+info "GitHub account: $GH_USER"
+
 # Create GitHub repo
-info "Creating GitHub repository kevinnadjarian/FILE..."
-gh repo create kevinnadjarian/FILE \
+info "Creating GitHub repository $GH_USER/FILE..."
+gh repo create "$GH_USER/FILE" \
     --public \
     --description "FILE - Zero Trust P2P Network with MPQUIC relay and CAPoW anti-DoS" \
     --source . \
@@ -58,7 +62,7 @@ gh repo create kevinnadjarian/FILE \
 info "✅ Repository created and code pushed!"
 echo ""
 info "Next steps:"
-echo "  1. Check GitHub Actions: https://github.com/kevinnadjarian/FILE/actions"
+echo "  1. Check GitHub Actions: https://github.com/$GH_USER/FILE/actions"
 echo "  2. Wait ~5-10 min for x86_64 + aarch64 builds"
 echo "  3. Download artifacts or deploy directly"
 echo ""

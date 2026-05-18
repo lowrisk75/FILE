@@ -21,7 +21,7 @@ LOG_DIR="/var/log/file-relay"
 BINARY_NAME="file-relay"
 
 # GitHub release settings (optional - will download pre-built binaries)
-GITHUB_REPO="kevinnadjarian/FILE"
+GITHUB_REPO="lowrisk75/FILE"
 GITHUB_RELEASE="latest"  # or specific tag like "v0.1.0"
 
 # Colors
