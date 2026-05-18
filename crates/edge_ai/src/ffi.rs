@@ -93,7 +93,8 @@ pub unsafe extern "C" fn ai_create(out_backend: *mut *mut AiBackend) -> c_int {
 
     // Create AneRoutingAgent (auto-detect backend)
     let agent = match runtime.block_on(async {
-        AneRoutingAgent::auto().await
+        AneRoutingAgent::auto()
+            .await
             .map_err(|_| AiError::BackendNotAvailable)
     }) {
         Ok(a) => a,
@@ -101,10 +102,7 @@ pub unsafe extern "C" fn ai_create(out_backend: *mut *mut AiBackend) -> c_int {
     };
 
     // Wrap in FFI-safe structure
-    let backend_real = Box::new(AiBackendReal {
-        agent,
-        runtime,
-    });
+    let backend_real = Box::new(AiBackendReal { agent, runtime });
 
     *out_backend = Box::into_raw(backend_real) as *mut AiBackend;
     AiError::Success as c_int
@@ -212,7 +210,10 @@ pub unsafe extern "C" fn ai_update_lora(
 
     // Update LoRA weights (async operation)
     let duration = match backend_real.runtime.block_on(async {
-        backend_real.agent.update_from_context(&network_context).await
+        backend_real
+            .agent
+            .update_from_context(&network_context)
+            .await
             .map_err(|_| AiError::InferenceFailed)
     }) {
         Ok(d) => d,
@@ -255,11 +256,7 @@ pub unsafe extern "C" fn ai_infer(
     output_capacity: usize,
     out_len: *mut usize,
 ) -> i64 {
-    if backend.is_null()
-        || input.is_null()
-        || output.is_null()
-        || out_len.is_null()
-    {
+    if backend.is_null() || input.is_null() || output.is_null() || out_len.is_null() {
         return -1;
     }
 
@@ -267,18 +264,20 @@ pub unsafe extern "C" fn ai_infer(
 
     // Convert f32 input to f16 for backend
     let in_slice = slice::from_raw_parts(input, input_len);
-    let input_f16: Vec<half::f16> = in_slice.iter()
-        .map(|&f| half::f16::from_f32(f))
-        .collect();
+    let input_f16: Vec<half::f16> = in_slice.iter().map(|&f| half::f16::from_f32(f)).collect();
 
     // Run inference (async)
-    let (output_f16, duration): (Vec<half::f16>, std::time::Duration) = match backend_real.runtime.block_on(async {
-        backend_real.agent.infer(&input_f16).await
-            .map_err(|_| AiError::InferenceFailed)
-    }) {
-        Ok(result) => result,
-        Err(_) => return -1,
-    };
+    let (output_f16, duration): (Vec<half::f16>, std::time::Duration) =
+        match backend_real.runtime.block_on(async {
+            backend_real
+                .agent
+                .infer(&input_f16)
+                .await
+                .map_err(|_| AiError::InferenceFailed)
+        }) {
+            Ok(result) => result,
+            Err(_) => return -1,
+        };
 
     // Convert f16 output back to f32
     let len = output_f16.len().min(output_capacity);

@@ -2,10 +2,10 @@
 //!
 //! Tests the HMAC-SHA256 IP anonymization system
 
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
 use rand::Rng;
+use sha2::Sha256;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -23,8 +23,7 @@ fn hash_ip(ip: &IpAddr, secret: &[u8; 32]) -> u64 {
 
     // Take first 8 bytes and convert to u64
     u64::from_be_bytes([
-        bytes[0], bytes[1], bytes[2], bytes[3],
-        bytes[4], bytes[5], bytes[6], bytes[7],
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
     ])
 }
 
@@ -57,7 +56,10 @@ fn test_ip_hash_different_ips() {
     let hash1 = hash_ip(&ip1, &secret);
     let hash2 = hash_ip(&ip2, &secret);
 
-    assert_ne!(hash1, hash2, "Different IPs should hash to different values");
+    assert_ne!(
+        hash1, hash2,
+        "Different IPs should hash to different values"
+    );
 }
 
 #[test]
@@ -69,7 +71,10 @@ fn test_ip_hash_different_secrets() {
     let hash1 = hash_ip(&ip, &secret1);
     let hash2 = hash_ip(&ip, &secret2);
 
-    assert_ne!(hash1, hash2, "Same IP with different secrets should hash differently");
+    assert_ne!(
+        hash1, hash2,
+        "Same IP with different secrets should hash differently"
+    );
 }
 
 #[test]
@@ -86,7 +91,9 @@ fn test_ipv4_hash() {
 #[test]
 fn test_ipv6_hash() {
     let secret = generate_secret();
-    let ip = IpAddr::V6(Ipv6Addr::new(0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334));
+    let ip = IpAddr::V6(Ipv6Addr::new(
+        0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334,
+    ));
 
     let hash = hash_ip(&ip, &secret);
 
@@ -104,7 +111,10 @@ fn test_ipv4_ipv6_hash_different() {
     let hash_v6 = hash_ip(&ipv6, &secret);
 
     // IPv4 and IPv6-mapped addresses should hash differently
-    assert_ne!(hash_v4, hash_v6, "IPv4 and IPv6 addresses should hash differently");
+    assert_ne!(
+        hash_v4, hash_v6,
+        "IPv4 and IPv6 addresses should hash differently"
+    );
 }
 
 #[test]
@@ -141,7 +151,11 @@ fn test_secret_size() {
     let secret = generate_secret();
 
     // Secret should be exactly 32 bytes (256 bits)
-    assert_eq!(secret.len(), 32, "Secret should be 32 bytes for HMAC-SHA256");
+    assert_eq!(
+        secret.len(),
+        32,
+        "Secret should be 32 bytes for HMAC-SHA256"
+    );
 }
 
 #[test]
@@ -152,7 +166,10 @@ fn test_hash_output_range() {
     let hash = hash_ip(&ip, &secret);
 
     // Hash should be in valid u64 range (always true, but documents the type)
-    assert!(hash >= u64::MIN && hash <= u64::MAX, "Hash should be valid u64");
+    assert!(
+        hash >= u64::MIN && hash <= u64::MAX,
+        "Hash should be valid u64"
+    );
 }
 
 #[test]
@@ -174,7 +191,11 @@ fn test_batch_hashing_performance() {
     let duration = start.elapsed();
 
     // 10,000 hashes should complete in under 1 second on any modern hardware
-    assert!(duration.as_secs() < 1, "Batch hashing should be fast: {:?}", duration);
+    assert!(
+        duration.as_secs() < 1,
+        "Batch hashing should be fast: {:?}",
+        duration
+    );
 }
 
 #[test]
@@ -195,7 +216,10 @@ fn test_hash_distribution() {
 
     // Distribution should span a significant range (not clustered)
     let range = max - min;
-    assert!(range > u64::MAX / 1000, "Hash distribution should span significant range");
+    assert!(
+        range > u64::MAX / 1000,
+        "Hash distribution should span significant range"
+    );
 }
 
 #[test]
@@ -247,5 +271,9 @@ async fn test_concurrent_hashing() {
     }
 
     // All 10,000 hashes should be unique
-    assert_eq!(all_hashes.len(), 10000, "Concurrent hashing should produce unique values");
+    assert_eq!(
+        all_hashes.len(),
+        10000,
+        "Concurrent hashing should produce unique values"
+    );
 }

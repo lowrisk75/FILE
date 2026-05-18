@@ -71,9 +71,7 @@ pub unsafe extern "C" fn vfs_is_high_entropy(
 /// - 0 if not whitelisted
 /// - -1 on error
 #[no_mangle]
-pub unsafe extern "C" fn vfs_is_extension_whitelisted(
-    path: *const c_char,
-) -> c_int {
+pub unsafe extern "C" fn vfs_is_extension_whitelisted(path: *const c_char) -> c_int {
     if path.is_null() {
         return -1;
     }
@@ -180,10 +178,16 @@ mod tests {
     fn test_extension_whitelist() {
         unsafe {
             let zip = b"archive.zip\0";
-            assert_eq!(vfs_is_extension_whitelisted(zip.as_ptr() as *const c_char), 1);
+            assert_eq!(
+                vfs_is_extension_whitelisted(zip.as_ptr() as *const c_char),
+                1
+            );
 
             let bin = b"encrypted.bin\0";
-            assert_eq!(vfs_is_extension_whitelisted(bin.as_ptr() as *const c_char), 0);
+            assert_eq!(
+                vfs_is_extension_whitelisted(bin.as_ptr() as *const c_char),
+                0
+            );
         }
     }
 }

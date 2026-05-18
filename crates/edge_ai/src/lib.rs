@@ -362,8 +362,8 @@
 // pub mod memory;
 
 // Re-exports (updated for hybrid architecture)
-pub use routing_agent::AneRoutingAgent;
 pub use lora_adapter::{LoraAdapter, LoraRank};
+pub use routing_agent::AneRoutingAgent;
 
 /// Errors that can occur during ANE operations
 #[derive(Debug, thiserror::Error)]

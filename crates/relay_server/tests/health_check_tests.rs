@@ -93,7 +93,8 @@ file_relay_peers_registered_total 156
     assert!(sample_metrics.contains("counter"));
 
     // Verify values are numeric
-    let lines: Vec<&str> = sample_metrics.lines()
+    let lines: Vec<&str> = sample_metrics
+        .lines()
         .filter(|line| !line.starts_with('#') && !line.is_empty())
         .collect();
 
@@ -123,18 +124,31 @@ fn test_metrics_naming_convention() {
 
     for name in metric_names {
         // All metrics should start with "file_relay_"
-        assert!(name.starts_with("file_relay_"), "Metric should have namespace prefix");
+        assert!(
+            name.starts_with("file_relay_"),
+            "Metric should have namespace prefix"
+        );
 
         // All counter metrics should end with "_total"
-        if name.contains("registered") || name.contains("verified") ||
-           name.contains("rejected") || name.contains("limited") ||
-           name.contains("forwarded") || name.contains("timeout") {
-            assert!(name.ends_with("_total"), "Counter metric should end with _total");
+        if name.contains("registered")
+            || name.contains("verified")
+            || name.contains("rejected")
+            || name.contains("limited")
+            || name.contains("forwarded")
+            || name.contains("timeout")
+        {
+            assert!(
+                name.ends_with("_total"),
+                "Counter metric should end with _total"
+            );
         }
 
         // All names should be snake_case (lowercase with underscores)
         assert_eq!(name, name.to_lowercase(), "Metric name should be lowercase");
-        assert!(!name.contains('-'), "Metric name should use underscores, not dashes");
+        assert!(
+            !name.contains('-'),
+            "Metric name should use underscores, not dashes"
+        );
     }
 }
 

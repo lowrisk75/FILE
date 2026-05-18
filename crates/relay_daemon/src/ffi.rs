@@ -9,10 +9,9 @@
 //! - Asymmetric: 32x memory ratio, 50,000x time ratio
 
 use crate::capow::{
-    generate_argon2_dag, dag_to_block1024, wagner_algorithm, build_mtp_tree,
-    generate_mtp_proof, compute_context_score,
-    map_score_to_difficulty, NetworkFeatures,
-    GBP_K, GBP_COLLISION_BITS,
+    build_mtp_tree, compute_context_score, dag_to_block1024, generate_argon2_dag,
+    generate_mtp_proof, map_score_to_difficulty, wagner_algorithm, NetworkFeatures,
+    GBP_COLLISION_BITS, GBP_K,
 };
 use std::ffi::c_int;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -253,9 +252,7 @@ pub unsafe extern "C" fn capow_verify_proof(
 /// # Returns
 /// Recommended difficulty level (typically 15-25)
 #[no_mangle]
-pub unsafe extern "C" fn capow_recommended_difficulty(
-    context: *const NetworkContextFFI,
-) -> u32 {
+pub unsafe extern "C" fn capow_recommended_difficulty(context: *const NetworkContextFFI) -> u32 {
     if context.is_null() {
         return 20; // Default difficulty
     }

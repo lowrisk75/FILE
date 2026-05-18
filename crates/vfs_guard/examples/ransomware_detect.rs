@@ -2,8 +2,8 @@
 //!
 //! Demonstrates Shannon entropy-based ransomware detection.
 
-use vfs_guard::{VfsGuard, GuardConfig};
 use std::path::PathBuf;
+use vfs_guard::{GuardConfig, VfsGuard};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +14,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = guard.config().await;
 
     println!("Configuration:");
-    println!("  • Entropy threshold: {} bits/byte", config.entropy_threshold);
+    println!(
+        "  • Entropy threshold: {} bits/byte",
+        config.entropy_threshold
+    );
     println!("  • Min file size: {} bytes", config.min_file_size);
     println!("  • SIMD enabled: {}\n", config.enable_simd);
 
@@ -24,7 +27,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let entropy = guard.calculate_entropy(&plaintext).await;
     println!("  • Data: ASCII text (repeated)");
     println!("  • Entropy: {:.2} bits/byte", entropy);
-    match guard.check_write(&PathBuf::from("document.txt"), &plaintext).await {
+    match guard
+        .check_write(&PathBuf::from("document.txt"), &plaintext)
+        .await
+    {
         Ok(()) => println!("  ✅ ALLOWED\n"),
         Err(e) => println!("  ❌ BLOCKED: {}\n", e),
     }
@@ -43,7 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let entropy = guard.calculate_entropy(&encrypted).await;
     println!("  • Data: Pseudo-random (simulated AES)");
     println!("  • Entropy: {:.2} bits/byte", entropy);
-    match guard.check_write(&PathBuf::from("encrypted.bin"), &encrypted).await {
+    match guard
+        .check_write(&PathBuf::from("encrypted.bin"), &encrypted)
+        .await
+    {
         Ok(()) => println!("  ✅ ALLOWED\n"),
         Err(e) => println!("  ❌ BLOCKED: {}\n", e),
     }
@@ -54,7 +63,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  • Data: Same high-entropy data");
     println!("  • Extension: .zip (whitelisted)");
     println!("  • Entropy: {:.2} bits/byte", entropy);
-    match guard.check_write(&PathBuf::from("archive.zip"), &encrypted).await {
+    match guard
+        .check_write(&PathBuf::from("archive.zip"), &encrypted)
+        .await
+    {
         Ok(()) => println!("  ✅ ALLOWED (whitelisted)\n"),
         Err(e) => println!("  ❌ BLOCKED: {}\n", e),
     }
@@ -63,9 +75,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Test 4: Small file (below threshold)");
     let small_encrypted = vec![0xFFu8; 100]; // < 4096 bytes
     let entropy = guard.calculate_entropy(&small_encrypted).await;
-    println!("  • Size: {} bytes (< {} threshold)", small_encrypted.len(), config.min_file_size);
+    println!(
+        "  • Size: {} bytes (< {} threshold)",
+        small_encrypted.len(),
+        config.min_file_size
+    );
     println!("  • Entropy: {:.2} bits/byte", entropy);
-    match guard.check_write(&PathBuf::from("small.bin"), &small_encrypted).await {
+    match guard
+        .check_write(&PathBuf::from("small.bin"), &small_encrypted)
+        .await
+    {
         Ok(()) => println!("  ✅ ALLOWED (too small to threat)\n"),
         Err(e) => println!("  ❌ BLOCKED: {}\n", e),
     }

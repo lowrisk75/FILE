@@ -5,8 +5,8 @@
 // Zero Trust Architecture - No open ports until authenticated
 //
 
-use anyhow::{Context, Result};
 use ant_quic::{P2pConfig, P2pEndpoint, PeerId};
+use anyhow::{Context, Result};
 use axum::{
     extract::State as AxumState,
     http::StatusCode,
@@ -18,14 +18,14 @@ use clap::Parser;
 use dashmap::DashMap;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
-use relay_daemon::{MtpProof, async_verify_proof_with_timeout, init_crypto_workers};
+use relay_daemon::{async_verify_proof_with_timeout, init_crypto_workers, MtpProof};
 use serde_json::json;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 /// FILE Relay Server CLI
 #[derive(Parser, Debug)]
@@ -59,12 +59,12 @@ struct Args {
 /// Relay metrics (Prometheus-compatible counters)
 #[derive(Debug)]
 struct RelayMetrics {
-    peers_registered: AtomicU64,     // Total peers ever registered
-    capow_verified: AtomicU64,       // Total CAPoW proofs successfully verified
-    capow_rejected: AtomicU64,       // Total CAPoW proofs rejected (replay/invalid)
-    rate_limited: AtomicU64,         // Total requests rate-limited
-    packets_forwarded: AtomicU64,    // Total packets successfully forwarded
-    peers_timeout: AtomicU64,        // Total peers removed due to timeout
+    peers_registered: AtomicU64,  // Total peers ever registered
+    capow_verified: AtomicU64,    // Total CAPoW proofs successfully verified
+    capow_rejected: AtomicU64,    // Total CAPoW proofs rejected (replay/invalid)
+    rate_limited: AtomicU64,      // Total requests rate-limited
+    packets_forwarded: AtomicU64, // Total packets successfully forwarded
+    peers_timeout: AtomicU64,     // Total peers removed due to timeout
 }
 
 impl RelayMetrics {
@@ -89,14 +89,14 @@ struct RateLimiter {
     tokens: f64,
     last_refill: Instant,
     capacity: f64,
-    refill_rate: f64,  // tokens per second
+    refill_rate: f64, // tokens per second
 }
 
 #[allow(dead_code)]
 impl RateLimiter {
     fn new(capacity: f64, refill_rate: f64) -> Self {
         Self {
-            tokens: capacity,  // Start with full bucket
+            tokens: capacity, // Start with full bucket
             last_refill: Instant::now(),
             capacity,
             refill_rate,
@@ -219,16 +219,16 @@ impl ChallengeManager {
 struct PeerState {
     peer_id: Vec<u8>,
     addr: SocketAddr,
-    peer_id_quic: PeerId,  // ant-quic PeerId for forwarding
+    peer_id_quic: PeerId, // ant-quic PeerId for forwarding
     connected_at: std::time::Instant,
-    packets_forwarded: Arc<AtomicU64>,  // Atomic for lock-free concurrent updates
-    last_activity: Arc<AtomicU64>,  // Unix timestamp (seconds) of last packet forwarded to this peer
+    packets_forwarded: Arc<AtomicU64>, // Atomic for lock-free concurrent updates
+    last_activity: Arc<AtomicU64>, // Unix timestamp (seconds) of last packet forwarded to this peer
 }
 
 /// Global relay state
 #[allow(dead_code)]
 struct RelayState {
-    peers: DashMap<Vec<u8>, PeerState>,  // Lock-free concurrent access with secure hashing (SipHash)
+    peers: DashMap<Vec<u8>, PeerState>, // Lock-free concurrent access with secure hashing (SipHash)
     endpoint: Arc<P2pEndpoint>,
     capow_enabled: bool,
     capow_timeout: Duration,
@@ -237,7 +237,7 @@ struct RelayState {
     rate_limiters: DashMap<IpAddr, RateLimiter>, // Per-IP rate limiting
     ip_hash_secret: [u8; 32], // Per-boot random secret for GDPR-compliant IP hashing
     proof_replay_cache: DashMap<[u8; 32], Instant>, // Anti-replay cache for CAPoW proofs (5 min TTL)
-    metrics: RelayMetrics,  // Operational metrics (Prometheus-compatible)
+    metrics: RelayMetrics,                          // Operational metrics (Prometheus-compatible)
 }
 
 #[allow(dead_code)]
@@ -273,15 +273,16 @@ impl RelayState {
         mac.update(ip.to_string().as_bytes());
         let result = mac.finalize();
         let hash = hex::encode(result.into_bytes());
-        hash[..16].to_string()  // First 16 chars (64 bits of entropy)
+        hash[..16].to_string() // First 16 chars (64 bits of entropy)
     }
 
     /// Check rate limit for an IP address
     /// Returns true if allowed, false if rate limited
     fn check_rate_limit(&self, addr: IpAddr) -> bool {
-        let allowed = self.rate_limiters
+        let allowed = self
+            .rate_limiters
             .entry(addr)
-            .or_insert_with(|| RateLimiter::new(50.0, 10.0))  // 50 burst, 10 req/s
+            .or_insert_with(|| RateLimiter::new(50.0, 10.0)) // 50 burst, 10 req/s
             .try_consume();
 
         if !allowed {
@@ -306,17 +307,18 @@ impl RelayState {
         // Check replay cache (5 min window)
         if let Some(first_seen) = self.proof_replay_cache.get(&proof_hash) {
             let age = first_seen.value().elapsed();
-            if age < Duration::from_secs(300) {  // 5 minutes
+            if age < Duration::from_secs(300) {
+                // 5 minutes
                 self.metrics.capow_rejected.fetch_add(1, Ordering::Relaxed);
                 warn!("⚠️ CAPoW proof replay detected (age: {:?})", age);
-                return Ok(false);  // Reject replayed proof
+                return Ok(false); // Reject replayed proof
             }
             // Old entry, will be cleaned up - allow verification
         }
 
         // Deserialize MtpProof from bytes
-        let mtp_proof: MtpProof = bincode::deserialize(proof)
-            .context("Failed to deserialize MtpProof")?;
+        let mtp_proof: MtpProof =
+            bincode::deserialize(proof).context("Failed to deserialize MtpProof")?;
 
         // Try verifying against current challenge first
         let current_challenge = self.challenge_manager.get_current().await;
@@ -342,12 +344,17 @@ impl RelayState {
                     .await
                     {
                         Ok(()) => {
-                            info!("✅ CAPoW proof verified against previous challenge (grace period)");
+                            info!(
+                                "✅ CAPoW proof verified against previous challenge (grace period)"
+                            );
                             true
                         }
                         Err(e) => {
                             self.metrics.capow_rejected.fetch_add(1, Ordering::Relaxed);
-                            error!("❌ CAPoW verification failed against both challenges: {}", e);
+                            error!(
+                                "❌ CAPoW verification failed against both challenges: {}",
+                                e
+                            );
                             false
                         }
                     }
@@ -377,7 +384,12 @@ impl RelayState {
     }
 
     /// Register a new peer
-    async fn register_peer(&self, peer_id: Vec<u8>, addr: SocketAddr, peer_id_quic: PeerId) -> Result<()> {
+    async fn register_peer(
+        &self,
+        peer_id: Vec<u8>,
+        addr: SocketAddr,
+        peer_id_quic: PeerId,
+    ) -> Result<()> {
         // Validate peer_id structure (must be exactly 32 bytes - Ed25519 public key)
         if peer_id.len() != 32 {
             anyhow::bail!(
@@ -413,7 +425,9 @@ impl RelayState {
         };
 
         self.peers.insert(peer_id.clone(), state);
-        self.metrics.peers_registered.fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .peers_registered
+            .fetch_add(1, Ordering::Relaxed);
         info!(
             "Peer registered: {:?} from IP hash: {}",
             hex::encode(&peer_id[..8]),
@@ -445,7 +459,9 @@ impl RelayState {
 
             // Update stats (atomic, lock-free)
             dest_peer.packets_forwarded.fetch_add(1, Ordering::Relaxed);
-            self.metrics.packets_forwarded.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .packets_forwarded
+                .fetch_add(1, Ordering::Relaxed);
 
             // Update last activity timestamp (for zombie peer cleanup)
             let now_unix = SystemTime::now()
@@ -474,10 +490,13 @@ impl RelayState {
 /// Health check endpoint (liveness probe)
 /// Returns 200 OK if the process is alive
 async fn health_handler() -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({
-        "status": "healthy",
-        "service": "FILE Relay Server"
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "healthy",
+            "service": "FILE Relay Server"
+        })),
+    )
 }
 
 /// Readiness probe endpoint
@@ -487,18 +506,24 @@ async fn ready_handler(AxumState(state): AxumState<Arc<RelayState>>) -> impl Int
     let is_ready = active_peers < state.max_peers;
 
     if is_ready {
-        (StatusCode::OK, Json(json!({
-            "status": "ready",
-            "active_peers": active_peers,
-            "max_peers": state.max_peers
-        })))
+        (
+            StatusCode::OK,
+            Json(json!({
+                "status": "ready",
+                "active_peers": active_peers,
+                "max_peers": state.max_peers
+            })),
+        )
     } else {
-        (StatusCode::SERVICE_UNAVAILABLE, Json(json!({
-            "status": "not_ready",
-            "reason": "max_peers_reached",
-            "active_peers": active_peers,
-            "max_peers": state.max_peers
-        })))
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "status": "not_ready",
+                "reason": "max_peers_reached",
+                "active_peers": active_peers,
+                "max_peers": state.max_peers
+            })),
+        )
     }
 }
 
@@ -569,11 +594,14 @@ async fn challenge_handler(AxumState(state): AxumState<Arc<RelayState>>) -> impl
         .unwrap()
         .as_secs();
 
-    (StatusCode::OK, Json(json!({
-        "merkle_root": hex::encode(challenge.merkle_root),
-        "created_at": created_at,
-        "expires_at": expires_at,
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "merkle_root": hex::encode(challenge.merkle_root),
+            "created_at": created_at,
+            "expires_at": expires_at,
+        })),
+    )
 }
 
 // ============================================================================
@@ -602,7 +630,8 @@ async fn send_register_ack(
     response.push(status); // Status code
     response.extend_from_slice(message.as_bytes()); // Message
 
-    endpoint.send(peer_id, &response)
+    endpoint
+        .send(peer_id, &response)
         .await
         .context("Failed to send REGISTER_ACK")?;
 
@@ -619,11 +648,7 @@ async fn send_register_ack(
 /// │      0x01     │   [peer_id]        │   [MtpProof]           │
 /// └─────────────────────────────────────────────────────────────┘
 /// ```
-async fn handle_register(
-    packet: &[u8],
-    peer_id: PeerId,
-    state: Arc<RelayState>,
-) -> Result<()> {
+async fn handle_register(packet: &[u8], peer_id: PeerId, state: Arc<RelayState>) -> Result<()> {
     // Validate packet size (1 byte type + 32 bytes peer_id + at least 1 byte proof)
     if packet.len() < 34 {
         send_register_ack(&state.endpoint, &peer_id, 0x01, "Packet too small").await?;
@@ -643,7 +668,10 @@ async fn handle_register(
         }
         Ok(false) => {
             // CAPoW verification failed
-            warn!("⚠️ CAPoW verification failed for peer {:?}", hex::encode(&claimed_peer_id[..8]));
+            warn!(
+                "⚠️ CAPoW verification failed for peer {:?}",
+                hex::encode(&claimed_peer_id[..8])
+            );
             send_register_ack(&state.endpoint, &peer_id, 0x01, "CAPoW invalid").await?;
             return Ok(());
         }
@@ -656,13 +684,19 @@ async fn handle_register(
     }
 
     // Register peer
-    match state.register_peer(
-        claimed_peer_id.to_vec(),
-        "0.0.0.0:0".parse().unwrap(), // Placeholder - actual address not needed for MPQUIC relay
-        peer_id,
-    ).await {
+    match state
+        .register_peer(
+            claimed_peer_id.to_vec(),
+            "0.0.0.0:0".parse().unwrap(), // Placeholder - actual address not needed for MPQUIC relay
+            peer_id,
+        )
+        .await
+    {
         Ok(()) => {
-            info!("✅ Peer registered: {:?}", hex::encode(&claimed_peer_id[..8]));
+            info!(
+                "✅ Peer registered: {:?}",
+                hex::encode(&claimed_peer_id[..8])
+            );
             send_register_ack(&state.endpoint, &peer_id, 0x00, "OK").await?;
         }
         Err(e) => {
@@ -687,11 +721,7 @@ async fn handle_register(
 /// │      0x03     │   [dest_peer_id]        │   [MPQUIC packet]    │
 /// └──────────────────────────────────────────────────────────────────┘
 /// ```
-async fn handle_relay(
-    packet: &[u8],
-    src_peer_id: PeerId,
-    state: Arc<RelayState>,
-) -> Result<()> {
+async fn handle_relay(packet: &[u8], src_peer_id: PeerId, state: Arc<RelayState>) -> Result<()> {
     // Validate packet size (1 byte type + 32 bytes dest_peer_id + payload)
     if packet.len() < 34 {
         anyhow::bail!("RELAY packet too small: {} bytes", packet.len());
@@ -707,7 +737,9 @@ async fn handle_relay(
     let src_peer_bytes = src_peer_id.0.to_vec();
 
     // Forward packet to destination
-    state.forward_packet(&src_peer_bytes, dest_peer_id, payload).await?;
+    state
+        .forward_packet(&src_peer_bytes, dest_peer_id, payload)
+        .await?;
 
     Ok(())
 }
@@ -722,11 +754,7 @@ async fn handle_relay(
 /// │      0x04     │  u64 (8 B)  │
 /// └─────────────────────────────┘
 /// ```
-async fn handle_keepalive(
-    packet: &[u8],
-    peer_id: PeerId,
-    state: Arc<RelayState>,
-) -> Result<()> {
+async fn handle_keepalive(packet: &[u8], peer_id: PeerId, state: Arc<RelayState>) -> Result<()> {
     // Validate packet size (1 byte type + 8 bytes timestamp)
     if packet.len() < 9 {
         anyhow::bail!("KEEPALIVE packet too small: {} bytes", packet.len());
@@ -744,7 +772,10 @@ async fn handle_keepalive(
 
         info!("💓 Keepalive from {:?}", hex::encode(&peer_id_bytes[..8]));
     } else {
-        warn!("⚠️ KEEPALIVE from unknown peer {:?}", hex::encode(&peer_id_bytes[..8]));
+        warn!(
+            "⚠️ KEEPALIVE from unknown peer {:?}",
+            hex::encode(&peer_id_bytes[..8])
+        );
     }
 
     Ok(())
@@ -767,7 +798,10 @@ async fn main() -> Result<()> {
     // Initialize crypto worker pool (for CAPoW verification)
     if args.capow {
         let num_crypto_cores = std::cmp::max(num_cpus::get() / 4, 2); // 25% of cores, min 2
-        info!("Initializing crypto worker pool ({} cores)...", num_crypto_cores);
+        info!(
+            "Initializing crypto worker pool ({} cores)...",
+            num_crypto_cores
+        );
         init_crypto_workers(num_crypto_cores)
             .map_err(|e| anyhow::anyhow!("Failed to initialize crypto worker pool: {}", e))?;
         info!("✅ Crypto worker pool initialized");
@@ -811,7 +845,8 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to build P2pConfig")?;
 
-    let endpoint = P2pEndpoint::new(config).await
+    let endpoint = P2pEndpoint::new(config)
+        .await
         .context("Failed to create P2pEndpoint")?;
 
     info!("✅ MPQUIC endpoint initialized on {}", args.bind);
@@ -865,12 +900,12 @@ async fn main() -> Result<()> {
             loop {
                 interval.tick().await;
                 let now = Instant::now();
-                let ttl = Duration::from_secs(300);  // 5 minutes
+                let ttl = Duration::from_secs(300); // 5 minutes
 
                 // Remove expired entries
-                state.proof_replay_cache.retain(|_, first_seen| {
-                    now.duration_since(*first_seen) < ttl
-                });
+                state
+                    .proof_replay_cache
+                    .retain(|_, first_seen| now.duration_since(*first_seen) < ttl);
 
                 let cache_size = state.proof_replay_cache.len();
                 if cache_size > 0 {
@@ -892,7 +927,7 @@ async fn main() -> Result<()> {
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
                     .as_secs();
-                let idle_timeout_secs = 300;  // 5 minutes
+                let idle_timeout_secs = 300; // 5 minutes
 
                 // Remove idle peers (DashMap.retain is lock-free)
                 state.peers.retain(|peer_id, peer_state| {
@@ -908,9 +943,9 @@ async fn main() -> Result<()> {
                             peer_state.packets_forwarded.load(Ordering::Relaxed),
                             idle_time
                         );
-                        false  // Remove this peer
+                        false // Remove this peer
                     } else {
-                        true  // Keep this peer
+                        true // Keep this peer
                     }
                 });
             }
@@ -934,7 +969,10 @@ async fn main() -> Result<()> {
                 .await
                 .expect("Failed to bind health check port");
 
-            info!("🏥 Health check server listening on http://0.0.0.0:{}", health_port);
+            info!(
+                "🏥 Health check server listening on http://0.0.0.0:{}",
+                health_port
+            );
             info!("   GET /health    - Liveness probe");
             info!("   GET /ready     - Readiness probe");
             info!("   GET /metrics   - Prometheus metrics");

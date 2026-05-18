@@ -336,9 +336,7 @@ pub async fn execute_simultaneous_open(
 
         // Déploiement d'une tâche asynchrone légère (green thread) par socket
         let task = tokio::spawn(async move {
-            for (&target_port, &jitter_ms) in
-                target_ports.iter().zip(jitters.iter())
-            {
+            for (&target_port, &jitter_ms) in target_ports.iter().zip(jitters.iter()) {
                 let target = SocketAddr::new(target_ip, target_port);
 
                 // Opération d'E/S asynchrone : émission du paquet pour instruire le pare-feu

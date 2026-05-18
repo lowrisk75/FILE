@@ -180,7 +180,9 @@ pub unsafe extern "C" fn transport_connect(
 
     // Establish connection (real ant-quic P2P with NAT traversal)
     let peer_id = match ctx.runtime.block_on(async {
-        let peer_conn = ctx.endpoint.connect(socket_addr)
+        let peer_conn = ctx
+            .endpoint
+            .connect(socket_addr)
             .await
             .map_err(|_| TransportError::ConnectionFailed)?;
 
@@ -265,11 +267,11 @@ pub unsafe extern "C" fn transport_send(
     let result = ctx.runtime.block_on(async {
         // Get peer_id
         let peer_ids = ctx.peer_ids.read().await;
-        let peer_id = peer_ids.get(&handle)
-            .ok_or(TransportError::PeerNotFound)?;
+        let peer_id = peer_ids.get(&handle).ok_or(TransportError::PeerNotFound)?;
 
         // Send via ant-quic (opens stream, encrypts, sends)
-        ctx.endpoint.send(peer_id, data_slice)
+        ctx.endpoint
+            .send(peer_id, data_slice)
             .await
             .map_err(|_| TransportError::SendFailed)?;
 
@@ -309,7 +311,9 @@ pub unsafe extern "C" fn transport_recv(
     let result = ctx.runtime.block_on(async {
         // Receive via ant-quic (blocks until data or timeout)
         let timeout = Duration::from_millis(timeout_ms);
-        let (peer_id, data) = ctx.endpoint.recv(timeout)
+        let (peer_id, data) = ctx
+            .endpoint
+            .recv(timeout)
             .await
             .map_err(|_| TransportError::Timeout)?;
 
@@ -408,10 +412,7 @@ mod tests {
         unsafe {
             let mut context: *mut TransportContext = std::ptr::null_mut();
 
-            let result = transport_create(
-                b"127.0.0.1:0\0".as_ptr() as *const c_char,
-                &mut context,
-            );
+            let result = transport_create(b"127.0.0.1:0\0".as_ptr() as *const c_char, &mut context);
             assert_eq!(result, TransportError::Success as c_int);
             assert!(!context.is_null());
 

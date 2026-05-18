@@ -110,9 +110,8 @@ impl VfsGuard {
     /// **Note**: This is a convenience wrapper that blocks the current thread.
     /// Prefer `check_write()` in async contexts.
     pub fn check_write_blocking(&self, path: &Path, data: &[u8]) -> Result<()> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            GuardError::ConfigError(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| GuardError::ConfigError(format!("Failed to create runtime: {}", e)))?;
 
         rt.block_on(self.check_write(path, data))
     }
@@ -130,9 +129,7 @@ impl VfsGuard {
     /// # Errors
     /// Returns error if validation fails
     pub async fn update_config(&self, new_config: GuardConfig) -> Result<()> {
-        new_config
-            .validate()
-            .map_err(GuardError::ConfigError)?;
+        new_config.validate().map_err(GuardError::ConfigError)?;
 
         let mut config = self.config.write().await;
         *config = new_config;
@@ -159,7 +156,9 @@ mod tests {
         let guard = VfsGuard::new(GuardConfig::default());
 
         let safe_data = b"The quick brown fox jumps over the lazy dog.";
-        let result = guard.check_write(&PathBuf::from("test.txt"), safe_data).await;
+        let result = guard
+            .check_write(&PathBuf::from("test.txt"), safe_data)
+            .await;
 
         assert!(result.is_ok());
     }
@@ -179,7 +178,9 @@ mod tests {
             encrypted.push(((state >> 24) & 0xFF) as u8);
         }
 
-        let result = guard.check_write(&PathBuf::from("encrypted.bin"), &encrypted).await;
+        let result = guard
+            .check_write(&PathBuf::from("encrypted.bin"), &encrypted)
+            .await;
 
         assert!(result.is_err());
         match result {
@@ -205,7 +206,9 @@ mod tests {
             encrypted.push(((state >> 24) & 0xFF) as u8);
         }
 
-        let result = guard.check_write(&PathBuf::from("archive.zip"), &encrypted).await;
+        let result = guard
+            .check_write(&PathBuf::from("archive.zip"), &encrypted)
+            .await;
 
         assert!(result.is_ok());
     }
@@ -217,7 +220,9 @@ mod tests {
         // High entropy but small file
         let small_encrypted = vec![0xAAu8; 100]; // < 4096 default min_file_size
 
-        let result = guard.check_write(&PathBuf::from("small.bin"), &small_encrypted).await;
+        let result = guard
+            .check_write(&PathBuf::from("small.bin"), &small_encrypted)
+            .await;
 
         assert!(result.is_ok());
     }
@@ -239,7 +244,9 @@ mod tests {
             data.push(((state >> 24) & 0xFF) as u8);
         }
 
-        let result = guard.check_write(&PathBuf::from("partial.bin"), &data).await;
+        let result = guard
+            .check_write(&PathBuf::from("partial.bin"), &data)
+            .await;
 
         // Should pass (only first 1KB checked, which is safe)
         assert!(result.is_ok());

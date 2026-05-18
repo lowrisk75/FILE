@@ -11,7 +11,6 @@
 /// ```bash
 /// RUSTFLAGS="-C target-cpu=native" cargo bench --package relay_daemon
 /// ```
-
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use relay_daemon::capow::{build_mtp_tree, generate_mtp_proof, verify_gbp_solution, Block1024};
 use std::time::Duration;
@@ -112,16 +111,12 @@ fn bench_merkle_tree_construction(c: &mut Criterion) {
     for size in [1024, 8192, 65536].iter() {
         let dag = create_test_dag(*size);
 
-        group.bench_with_input(
-            BenchmarkId::new("build_tree", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let tree = build_mtp_tree(black_box(&dag));
-                    black_box(tree)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("build_tree", size), size, |b, _| {
+            b.iter(|| {
+                let tree = build_mtp_tree(black_box(&dag));
+                black_box(tree)
+            });
+        });
     }
 
     group.finish();

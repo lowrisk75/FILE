@@ -2,9 +2,9 @@
 //!
 //! Tests the SHA-256 proof hashing and TTL-based replay cache
 
-use std::time::{Duration, Instant};
-use sha2::{Sha256, Digest};
 use dashmap::DashMap;
+use sha2::{Digest, Sha256};
+use std::time::{Duration, Instant};
 
 /// Hash a CAPoW proof using SHA-256
 fn hash_proof(proof: &[u8]) -> [u8; 32] {
@@ -53,7 +53,10 @@ fn test_proof_hash_different_proofs() {
     let hash1 = hash_proof(proof1);
     let hash2 = hash_proof(proof2);
 
-    assert_ne!(hash1, hash2, "Different proofs should hash to different values");
+    assert_ne!(
+        hash1, hash2,
+        "Different proofs should hash to different values"
+    );
 }
 
 #[test]
@@ -120,13 +123,19 @@ fn test_replay_cache_basic() {
     let hash = hash_proof(proof);
 
     // First submission should be new
-    assert!(!cache.contains_key(&hash), "Cache should be empty initially");
+    assert!(
+        !cache.contains_key(&hash),
+        "Cache should be empty initially"
+    );
 
     // Insert proof
     cache.insert(hash, CacheEntry::new());
 
     // Second submission should be detected as replay
-    assert!(cache.contains_key(&hash), "Cache should contain proof after insertion");
+    assert!(
+        cache.contains_key(&hash),
+        "Cache should contain proof after insertion"
+    );
 }
 
 #[tokio::test]
@@ -139,11 +148,17 @@ async fn test_replay_detection_timing() {
     cache.insert(hash, CacheEntry::new());
 
     // Immediate replay should be detected
-    assert!(cache.contains_key(&hash), "Immediate replay should be detected");
+    assert!(
+        cache.contains_key(&hash),
+        "Immediate replay should be detected"
+    );
 
     // Wait 100ms and check again
     tokio::time::sleep(Duration::from_millis(100)).await;
-    assert!(cache.contains_key(&hash), "Proof should still be cached after 100ms");
+    assert!(
+        cache.contains_key(&hash),
+        "Proof should still be cached after 100ms"
+    );
 }
 
 #[test]
@@ -171,7 +186,11 @@ fn test_cache_cleanup_expired_entries() {
     cache.retain(|_hash, entry| !entry.is_expired(ttl));
 
     // Only 5 recent entries should remain
-    assert_eq!(cache.len(), 5, "Cleanup should remove 10 expired entries, leave 5 recent");
+    assert_eq!(
+        cache.len(),
+        5,
+        "Cleanup should remove 10 expired entries, leave 5 recent"
+    );
 }
 
 #[tokio::test]
@@ -190,9 +209,7 @@ async fn test_concurrent_replay_detection() {
     // Spawn 100 tasks trying to check the same proof
     for _ in 0..100 {
         let cache_clone = cache.clone();
-        let handle = tokio::spawn(async move {
-            cache_clone.contains_key(&hash)
-        });
+        let handle = tokio::spawn(async move { cache_clone.contains_key(&hash) });
         handles.push(handle);
     }
 
@@ -275,14 +292,20 @@ async fn test_ttl_boundary_cases() {
     entry_exact.timestamp = Instant::now() - Duration::from_secs(300);
 
     // Should be expired (> TTL, not >=)
-    assert!(entry_exact.is_expired(ttl_5min), "Entry at exact TTL should be expired");
+    assert!(
+        entry_exact.is_expired(ttl_5min),
+        "Entry at exact TTL should be expired"
+    );
 
     // Entry just before TTL
     let mut entry_before = CacheEntry::new();
     entry_before.timestamp = Instant::now() - Duration::from_secs(299);
 
     // Should not be expired
-    assert!(!entry_before.is_expired(ttl_5min), "Entry just before TTL should not be expired");
+    assert!(
+        !entry_before.is_expired(ttl_5min),
+        "Entry just before TTL should not be expired"
+    );
 }
 
 #[test]
@@ -330,7 +353,11 @@ async fn test_cleanup_performance() {
     let duration = start.elapsed();
 
     // Cleanup of 10,000 entries should be fast (< 100ms)
-    assert!(duration.as_millis() < 100, "Cleanup should be fast: {:?}", duration);
+    assert!(
+        duration.as_millis() < 100,
+        "Cleanup should be fast: {:?}",
+        duration
+    );
 
     // Verify correct count
     assert_eq!(cache.len(), 5000, "Cleanup should remove 5,000 old entries");

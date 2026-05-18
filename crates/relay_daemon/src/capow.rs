@@ -158,10 +158,10 @@ impl Hasher for Sha256Algorithm {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MtpProof {
     pub nonce: [u8; 32],
-    pub indices: Vec<usize>,           // Indices de la solution GBP (k éléments)
+    pub indices: Vec<usize>, // Indices de la solution GBP (k éléments)
     pub extracted_blocks: Vec<Block1024>, // Blocs correspondants (pour XOR)
-    pub proof_bytes: Vec<u8>,          // Multi-proof Merkle sérialisé
-    pub leaves_count: usize,           // Taille du DAG (m)
+    pub proof_bytes: Vec<u8>, // Multi-proof Merkle sérialisé
+    pub leaves_count: usize, // Taille du DAG (m)
 }
 
 /// Features ML pour Context Scoring
@@ -405,10 +405,7 @@ pub fn generate_mtp_proof(
 /// 3. Vérification XOR cumulatif = 0
 ///
 /// Target: <100µs avec auto-vectorisation LLVM
-pub fn verify_gbp_solution(
-    proof: &MtpProof,
-    merkle_root: &[u8; 32],
-) -> Result<(), CapowError> {
+pub fn verify_gbp_solution(proof: &MtpProof, merkle_root: &[u8; 32]) -> Result<(), CapowError> {
     // 1. Recalcul des hachages de feuilles
     let mut leaf_hashes: Vec<[u8; 32]> = Vec::with_capacity(proof.extracted_blocks.len());
     for block in &proof.extracted_blocks {
@@ -506,10 +503,10 @@ pub fn compute_context_score(features: &NetworkFeatures) -> f32 {
 /// Mappe le score Φ vers la difficulté Argon2id (mémoire requise en KB)
 pub fn map_score_to_difficulty(score: f32) -> u32 {
     match score {
-        s if s < 3.0 => 65_536,      // 64 MB (minimal friction)
-        s if s < 6.0 => 524_288,     // 512 MB
-        s if s < 8.0 => 1_048_576,   // 1 GB
-        _ => 2_097_152,              // 2 GB (full penalty)
+        s if s < 3.0 => 65_536,    // 64 MB (minimal friction)
+        s if s < 6.0 => 524_288,   // 512 MB
+        s if s < 8.0 => 1_048_576, // 1 GB
+        _ => 2_097_152,            // 2 GB (full penalty)
     }
 }
 
@@ -571,8 +568,8 @@ mod tests {
 
     #[test]
     fn test_difficulty_mapping() {
-        assert_eq!(map_score_to_difficulty(1.0), 65_536);    // Low risk
-        assert_eq!(map_score_to_difficulty(5.0), 524_288);   // Medium
+        assert_eq!(map_score_to_difficulty(1.0), 65_536); // Low risk
+        assert_eq!(map_score_to_difficulty(5.0), 524_288); // Medium
         assert_eq!(map_score_to_difficulty(9.0), 2_097_152); // High risk
     }
 

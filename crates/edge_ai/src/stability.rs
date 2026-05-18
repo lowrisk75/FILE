@@ -95,9 +95,7 @@ pub fn clamp_tensor_fp16(tensor: &mut [f16]) {
 /// assert!(mil.contains("65504.0"));
 /// ```
 pub fn generate_clamp_mil(input_var: &str, output_var: &str) -> String {
-    format!(
-        "{output_var} = clamp({input_var}, min=-65504.0, max=65504.0)"
-    )
+    format!("{output_var} = clamp({input_var}, min=-65504.0, max=65504.0)")
 }
 
 /// Detect potential NaN risk in a tensor
@@ -159,8 +157,16 @@ impl TensorStats {
     ///
     /// Statistics struct
     pub fn compute(tensor: &[f16]) -> Self {
-        let min = tensor.iter().copied().min_by(|a, b| a.total_cmp(b)).unwrap_or(f16::ZERO);
-        let max = tensor.iter().copied().max_by(|a, b| a.total_cmp(b)).unwrap_or(f16::ZERO);
+        let min = tensor
+            .iter()
+            .copied()
+            .min_by(|a, b| a.total_cmp(b))
+            .unwrap_or(f16::ZERO);
+        let max = tensor
+            .iter()
+            .copied()
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap_or(f16::ZERO);
 
         let clamped_count = tensor
             .iter()

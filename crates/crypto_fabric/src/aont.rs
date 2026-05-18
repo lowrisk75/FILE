@@ -44,10 +44,10 @@
 
 use rand_chacha::ChaCha8Rng;
 use rand_core::SeedableRng;
-use sharks::{Sharks, Share};
-use reed_solomon_erasure::galois_8::ReedSolomon;
 use rayon::prelude::*;
-use sha2::{Sha256, Digest};
+use reed_solomon_erasure::galois_8::ReedSolomon;
+use sha2::{Digest, Sha256};
+use sharks::{Share, Sharks};
 
 /// Configuration AORATA v2 - Seuillage Shamir Secret Sharing
 ///

@@ -250,7 +250,11 @@ impl LoraAdapter {
                 .iter()
                 .map(|&v| {
                     // Manual abs since f16::abs() might not be available
-                    if v < f16::ZERO { -v } else { v }
+                    if v < f16::ZERO {
+                        -v
+                    } else {
+                        v
+                    }
                 })
                 .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                 .unwrap_or(f16::ZERO);

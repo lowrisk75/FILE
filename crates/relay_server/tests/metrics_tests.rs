@@ -92,7 +92,9 @@ async fn test_metrics_concurrent_increments() {
         let metrics_clone = metrics.clone();
         let handle = tokio::spawn(async move {
             for _ in 0..100 {
-                metrics_clone.peers_registered.fetch_add(1, Ordering::Relaxed);
+                metrics_clone
+                    .peers_registered
+                    .fetch_add(1, Ordering::Relaxed);
             }
         });
         handles.push(handle);
@@ -125,7 +127,9 @@ async fn test_metrics_multiple_counters_concurrent() {
             match i {
                 0 => {
                     for _ in 0..100 {
-                        metrics_clone.peers_registered.fetch_add(1, Ordering::Relaxed);
+                        metrics_clone
+                            .peers_registered
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                 }
                 1 => {
@@ -145,7 +149,9 @@ async fn test_metrics_multiple_counters_concurrent() {
                 }
                 4 => {
                     for _ in 0..500 {
-                        metrics_clone.packets_forwarded.fetch_add(1, Ordering::Relaxed);
+                        metrics_clone
+                            .packets_forwarded
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                 }
                 5 => {

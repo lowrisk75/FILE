@@ -209,12 +209,10 @@ impl AneHelperClient {
 
         match status {
             s if s == StatusCode::Ok as u32 => Ok(Duration::from_micros(latency_us)),
-            s if s == StatusCode::AneFailed as u32 => {
-                Err(BackendError::LoraUpdateFailed("ANE execution failed".into()))
-            }
-            s if s == StatusCode::ModelNotLoaded as u32 => {
-                Err(BackendError::ModelNotLoaded)
-            }
+            s if s == StatusCode::AneFailed as u32 => Err(BackendError::LoraUpdateFailed(
+                "ANE execution failed".into(),
+            )),
+            s if s == StatusCode::ModelNotLoaded as u32 => Err(BackendError::ModelNotLoaded),
             _ => Err(BackendError::LoraUpdateFailed("Unknown error".into())),
         }
     }
@@ -244,15 +242,14 @@ impl AneHelperClient {
         let output_len = stream.read_u32().await?;
 
         if status != StatusCode::Ok as u32 {
-            return Err(BackendError::InferenceFailed("Helper returned error".into()));
+            return Err(BackendError::InferenceFailed(
+                "Helper returned error".into(),
+            ));
         }
 
         let mut output = vec![f16::ZERO; output_len as usize];
         let bytes = unsafe {
-            std::slice::from_raw_parts_mut(
-                output.as_mut_ptr() as *mut u8,
-                output_len as usize * 2,
-            )
+            std::slice::from_raw_parts_mut(output.as_mut_ptr() as *mut u8, output_len as usize * 2)
         };
         stream.read_exact(bytes).await?;
 

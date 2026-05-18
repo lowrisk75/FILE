@@ -207,20 +207,16 @@ impl MpQuicFabric {
         //
         // P2pEndpoint::new() est async et retourne Result<P2pEndpoint, EndpointError>.
         // Le socket UDP interne est bindé sur bind_addr (ou 0.0.0.0:0 pour auto-assign).
-        let endpoint = P2pEndpoint::new(p2p_config)
-            .await
-            .map_err(|e| std::io::Error::other(
-                format!("ant-quic P2pEndpoint initialization failed: {}", e)
-            ))?;
+        let endpoint = P2pEndpoint::new(p2p_config).await.map_err(|e| {
+            std::io::Error::other(format!("ant-quic P2pEndpoint initialization failed: {}", e))
+        })?;
 
         // 3. SipHash-2-4 routing table avec bounded retention
         //
         // Les clés k1 et k2 sont générées cryptographiquement via rand::thread_rng().
         // Cela empêche un adversaire de pré-calculer des collisions CID → hash.
         let sip_builder = SipHash24Builder::new_secure();
-        let routing_table = Arc::new(RwLock::new(
-            SipHashMap::with_hasher(sip_builder)
-        ));
+        let routing_table = Arc::new(RwLock::new(SipHashMap::with_hasher(sip_builder)));
 
         // 4. Construction finale de la fabrique
         Ok(MpQuicFabric {

@@ -119,6 +119,6 @@ pub mod error;
 pub mod ffi;
 
 // Re-exports
-pub use guard::VfsGuard;
 pub use config::GuardConfig;
 pub use error::{GuardError, Result};
+pub use guard::VfsGuard;

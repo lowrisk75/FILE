@@ -134,11 +134,11 @@ async fn test_keepalive_packet_format() {
 #[tokio::test]
 async fn test_packet_type_identification() {
     // Test all packet types
-    let register_packet = vec![0x01, /* ... */];
-    let register_ack_packet = vec![0x02, /* ... */];
-    let relay_packet = vec![0x03, /* ... */];
-    let keepalive_packet = vec![0x04, /* ... */];
-    let unknown_packet = vec![0xFF, /* ... */];
+    let register_packet = vec![0x01 /* ... */];
+    let register_ack_packet = vec![0x02 /* ... */];
+    let relay_packet = vec![0x03 /* ... */];
+    let keepalive_packet = vec![0x04 /* ... */];
+    let unknown_packet = vec![0xFF /* ... */];
 
     assert_eq!(register_packet[0], 0x01, "Should identify REGISTER");
     assert_eq!(register_ack_packet[0], 0x02, "Should identify REGISTER_ACK");
@@ -156,7 +156,10 @@ async fn test_malformed_packet_rejection() {
 
     // REGISTER packet too small (missing peer_id)
     let short_register = vec![0x01, 0xAA, 0xBB]; // Only 3 bytes
-    assert!(short_register.len() < 34, "Short REGISTER should be rejected");
+    assert!(
+        short_register.len() < 34,
+        "Short REGISTER should be rejected"
+    );
 
     // RELAY packet too small (missing dest_peer_id)
     let short_relay = vec![0x03, 0xAA, 0xBB]; // Only 3 bytes
@@ -164,7 +167,10 @@ async fn test_malformed_packet_rejection() {
 
     // KEEPALIVE packet too small (missing timestamp)
     let short_keepalive = vec![0x04, 0xAA]; // Only 2 bytes
-    assert!(short_keepalive.len() < 9, "Short KEEPALIVE should be rejected");
+    assert!(
+        short_keepalive.len() < 9,
+        "Short KEEPALIVE should be rejected"
+    );
 }
 
 /// Test concurrent packet processing
@@ -172,11 +178,11 @@ async fn test_malformed_packet_rejection() {
 async fn test_concurrent_packet_processing() {
     // Simulate multiple packets arriving simultaneously
     let packets = vec![
-        vec![0x01, /* REGISTER */],
-        vec![0x03, /* RELAY */],
-        vec![0x04, /* KEEPALIVE */],
-        vec![0x03, /* RELAY */],
-        vec![0x01, /* REGISTER */],
+        vec![0x01 /* REGISTER */],
+        vec![0x03 /* RELAY */],
+        vec![0x04 /* KEEPALIVE */],
+        vec![0x03 /* RELAY */],
+        vec![0x01 /* REGISTER */],
     ];
 
     // Count packet types

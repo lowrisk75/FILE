@@ -60,11 +60,7 @@ fn test_rate_limiter_burst_capacity() {
 
     // Should allow 50 requests immediately (burst)
     for i in 1..=50 {
-        assert!(
-            limiter.try_consume(),
-            "Should allow request {} in burst",
-            i
-        );
+        assert!(limiter.try_consume(), "Should allow request {} in burst", i);
     }
 
     // 51st request should be denied
@@ -160,8 +156,8 @@ fn test_rate_limiter_does_not_overfill() {
 
 #[tokio::test]
 async fn test_rate_limiter_per_ip_isolation() {
-    use std::net::{IpAddr, Ipv4Addr};
     use dashmap::DashMap;
+    use std::net::{IpAddr, Ipv4Addr};
 
     let rate_limiters: DashMap<IpAddr, RateLimiter> = DashMap::new();
 
@@ -202,9 +198,9 @@ async fn test_rate_limiter_per_ip_isolation() {
 
 #[tokio::test]
 async fn test_rate_limiter_concurrent_access() {
-    use std::sync::Arc;
     use dashmap::DashMap;
     use std::net::{IpAddr, Ipv4Addr};
+    use std::sync::Arc;
 
     let rate_limiters: Arc<DashMap<IpAddr, RateLimiter>> = Arc::new(DashMap::new());
     let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));

@@ -58,9 +58,9 @@
 //!
 //! Source: NotebookLM (Gemini 2.5) + AORATA Protocol v2 Specification
 
-use snow::{Builder, Error, HandshakeState, StatelessTransportState};
 use snow::error::StateProblem;
 use snow::params::NoiseParams;
+use snow::{Builder, Error, HandshakeState, StatelessTransportState};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Définition des paramètres cryptographiques standard AORATA v2.
@@ -357,10 +357,7 @@ impl NoiseHandshake {
         }
 
         // Récupération de l'empreinte éphémère vitale conservée lors de l'initialisation.
-        let ephemeral_priv = self
-            .local_ephemeral_secret
-            .as_ref()
-            .ok_or(Error::Input)?;
+        let ephemeral_priv = self.local_ephemeral_secret.as_ref().ok_or(Error::Input)?;
 
         // Conformément à l'analyse cryptographique, le motif XXfallback s'avère
         // structurellement isomorphe à un pattern XX dont la première phase
@@ -710,11 +707,8 @@ mod tests {
         let client_keys = Builder::new(params).generate_keypair().unwrap();
 
         // Initiateur avec clé serveur connue (IK)
-        let mut initiator = NoiseHandshake::new_initiator(
-            &client_keys.private,
-            Some(&server_keys.public),
-        )
-        .unwrap();
+        let mut initiator =
+            NoiseHandshake::new_initiator(&client_keys.private, Some(&server_keys.public)).unwrap();
 
         // Répondeur en écoute IK
         let mut responder = NoiseHandshake::new_responder(&server_keys.private).unwrap();
@@ -741,7 +735,9 @@ mod tests {
         let responder_transport = responder.into_transport().unwrap();
 
         // Test chiffrement/déchiffrement
-        let encrypted = initiator_transport.encrypt_packet(b"Post-handshake").unwrap();
+        let encrypted = initiator_transport
+            .encrypt_packet(b"Post-handshake")
+            .unwrap();
         let decrypted = responder_transport.decrypt_packet(0, &encrypted).unwrap();
         assert_eq!(&decrypted, b"Post-handshake");
     }
@@ -842,11 +838,8 @@ mod tests {
         let client_keys = Builder::new(params).generate_keypair().unwrap();
 
         // Initiateur IK avec clé serveur connue
-        let mut initiator = NoiseHandshake::new_initiator(
-            &client_keys.private,
-            Some(&server_keys.public),
-        )
-        .unwrap();
+        let mut initiator =
+            NoiseHandshake::new_initiator(&client_keys.private, Some(&server_keys.public)).unwrap();
 
         // Répondeur IK
         let mut responder = NoiseHandshake::new_responder(&server_keys.private).unwrap();

@@ -9,7 +9,6 @@
 /// ```bash
 /// cargo run --package relay_daemon --example capow_demo --release
 /// ```
-
 use relay_daemon::{
     async_verify::{async_verify_proof, init_crypto_workers},
     capow::*,

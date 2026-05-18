@@ -2,7 +2,7 @@
 //!
 //! Demonstrates multi-tier backend detection and LoRA-based adaptive routing.
 
-use edge_ai::backend::{detect_backend, backend_available};
+use edge_ai::backend::{backend_available, detect_backend};
 use edge_ai::routing_agent::{AneRoutingAgent, NetworkContext};
 
 #[tokio::main]
@@ -21,34 +21,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 2: Initialize agent
     println!("📦 Initializing routing agent...");
     let mut agent = AneRoutingAgent::auto().await?;
-    println!("✅ Agent ready: {} (tier {})\n",
+    println!(
+        "✅ Agent ready: {} (tier {})\n",
         agent.backend_name(),
         agent.backend_tier()
     );
 
     // Step 3: Simulate network contexts
     let scenarios = vec![
-        ("Low latency, clean network", NetworkContext {
-            avg_ttl: 64,
-            asn: 15169,  // Google AS
-            iat_variance: 100,
-            cpu_load: 10,
-            num_paths: 3,
-        }),
-        ("High latency, congested", NetworkContext {
-            avg_ttl: 48,  // More hops
-            asn: 3356,  // Level3/Lumen (historically congested)
-            iat_variance: 5000,
-            cpu_load: 75,
-            num_paths: 5,
-        }),
-        ("CGNAT deep", NetworkContext {
-            avg_ttl: 32,  // Many NAT layers
-            asn: 12345,
-            iat_variance: 2000,
-            cpu_load: 40,
-            num_paths: 2,
-        }),
+        (
+            "Low latency, clean network",
+            NetworkContext {
+                avg_ttl: 64,
+                asn: 15169, // Google AS
+                iat_variance: 100,
+                cpu_load: 10,
+                num_paths: 3,
+            },
+        ),
+        (
+            "High latency, congested",
+            NetworkContext {
+                avg_ttl: 48, // More hops
+                asn: 3356,   // Level3/Lumen (historically congested)
+                iat_variance: 5000,
+                cpu_load: 75,
+                num_paths: 5,
+            },
+        ),
+        (
+            "CGNAT deep",
+            NetworkContext {
+                avg_ttl: 32, // Many NAT layers
+                asn: 12345,
+                iat_variance: 2000,
+                cpu_load: 40,
+                num_paths: 2,
+            },
+        ),
     ];
 
     println!("🧪 TESTING ADAPTIVE ROUTING\n");
@@ -70,7 +80,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if latency.as_micros() >= min as u128 && latency.as_micros() <= (max * 2) as u128 {
             println!("   ✅ Latency within expected range\n");
         } else {
-            println!("   ⚠️  Latency outside expected range ({}µs)\n", latency.as_micros());
+            println!(
+                "   ⚠️  Latency outside expected range ({}µs)\n",
+                latency.as_micros()
+            );
         }
     }
 
@@ -84,12 +97,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         edge_ai::backend::BackendType::HexagonDsp,
     ] {
         let available = backend_available(backend);
-        let status = if available { "✅ Available" } else { "❌ Not available" };
-        println!("{:20} {} (tier {}) — {}",
+        let status = if available {
+            "✅ Available"
+        } else {
+            "❌ Not available"
+        };
+        println!(
+            "{:20} {} (tier {}) — {}",
             backend.name(),
             status,
             backend.tier(),
-            if available { format!("{}-{}µs", backend.latency_range().0, backend.latency_range().1) } else { "N/A".to_string() }
+            if available {
+                format!(
+                    "{}-{}µs",
+                    backend.latency_range().0,
+                    backend.latency_range().1
+                )
+            } else {
+                "N/A".to_string()
+            }
         );
     }
 

@@ -1,3 +1,4 @@
+pub mod aont;
 /// Module crypto_fabric - Zero Trust Cryptography
 ///
 /// Implémente les primitives cryptographiques:
@@ -7,10 +8,9 @@
 ///
 /// Spécifications complètes: NotebookLM "FILE Project" > crypto_fabric
 pub mod noise;
-pub mod aont;
 
+pub use aont::{apply_aont_32bytes, encode_aorata_message, MPQUICPathPacket};
 pub use noise::{NoiseHandshake, Transport};
-pub use aont::{MPQUICPathPacket, apply_aont_32bytes, encode_aorata_message};
 
 // FFI exports for Swift/Objective-C
 pub mod ffi;

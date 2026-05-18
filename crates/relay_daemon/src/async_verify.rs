@@ -68,10 +68,7 @@ pub fn init_crypto_workers(num_cores: usize) -> Result<(), String> {
 /// }
 /// # }
 /// ```
-pub async fn async_verify_proof(
-    proof: MtpProof,
-    merkle_root: [u8; 32],
-) -> Result<(), String> {
+pub async fn async_verify_proof(proof: MtpProof, merkle_root: [u8; 32]) -> Result<(), String> {
     // Récupère le pool Rayon (panic si non initialisé)
     let pool = CRYPTO_POOL
         .get()
@@ -178,7 +175,11 @@ mod tests {
 
         // Vérification async devrait passer
         let result = async_verify_proof(proof, root).await;
-        assert!(result.is_ok(), "Async verification failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Async verification failed: {:?}",
+            result.err()
+        );
     }
 
     #[tokio::test]

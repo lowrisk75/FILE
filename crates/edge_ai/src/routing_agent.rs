@@ -117,18 +117,14 @@ impl AneRoutingAgent {
             }
 
             #[cfg(target_os = "android")]
-            BackendType::Nnapi => {
-                Box::new(crate::android_backend::NnapiBackend::init(
-                    "/data/local/tmp/aorata_routing.tflite".into(),
-                )?)
-            }
+            BackendType::Nnapi => Box::new(crate::android_backend::NnapiBackend::init(
+                "/data/local/tmp/aorata_routing.tflite".into(),
+            )?),
 
             #[cfg(all(target_os = "android", feature = "tier3-android"))]
-            BackendType::HexagonDsp => {
-                Box::new(crate::android_backend::HexagonBackend::init(
-                    "/data/local/tmp/aorata_routing.dlc".into(),
-                )?)
-            }
+            BackendType::HexagonDsp => Box::new(crate::android_backend::HexagonBackend::init(
+                "/data/local/tmp/aorata_routing.dlc".into(),
+            )?),
 
             #[allow(unreachable_patterns)]
             _ => return Err(BackendError::UnsupportedPlatform),

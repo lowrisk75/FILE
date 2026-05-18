@@ -2,7 +2,7 @@
 //!
 //! Tests signal handling, metrics logging, connection draining, and cleanup
 
-use std::sync::atomic::{AtomicU64, AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -149,9 +149,7 @@ async fn test_concurrent_shutdown_checks() {
     // Spawn 100 tasks checking shutdown status
     for _ in 0..100 {
         let coord = coordinator.clone();
-        handles.push(tokio::spawn(async move {
-            coord.is_shutting_down()
-        }));
+        handles.push(tokio::spawn(async move { coord.is_shutting_down() }));
     }
 
     // All should see not-shutting-down initially
@@ -167,9 +165,7 @@ async fn test_concurrent_shutdown_checks() {
     let mut handles = vec![];
     for _ in 0..100 {
         let coord = coordinator.clone();
-        handles.push(tokio::spawn(async move {
-            coord.is_shutting_down()
-        }));
+        handles.push(tokio::spawn(async move { coord.is_shutting_down() }));
     }
 
     for handle in handles {
@@ -183,13 +179,18 @@ async fn test_metrics_remain_accessible_during_shutdown() {
     let metrics = Arc::new(MockMetrics::new());
     metrics.packets_forwarded.store(1000, Ordering::Relaxed);
 
-    let coordinator = Arc::new(ShutdownCoordinator::new(metrics.clone(), Duration::from_millis(100)));
+    let coordinator = Arc::new(ShutdownCoordinator::new(
+        metrics.clone(),
+        Duration::from_millis(100),
+    ));
 
     // Spawn a task that keeps incrementing metrics during grace period
     let metrics_clone = metrics.clone();
     let increment_task = tokio::spawn(async move {
         for _ in 0..50 {
-            metrics_clone.packets_forwarded.fetch_add(1, Ordering::Relaxed);
+            metrics_clone
+                .packets_forwarded
+                .fetch_add(1, Ordering::Relaxed);
             sleep(Duration::from_millis(2)).await;
         }
     });
@@ -206,7 +207,10 @@ async fn test_metrics_remain_accessible_during_shutdown() {
 
     // Final metrics should be higher due to increments during grace period
     let final_value = metrics.packets_forwarded.load(Ordering::Relaxed);
-    assert!(final_value > 1000, "Metrics should continue updating during grace period");
+    assert!(
+        final_value > 1000,
+        "Metrics should continue updating during grace period"
+    );
 }
 
 #[tokio::test]
@@ -255,7 +259,10 @@ async fn test_shutdown_idempotency() {
     let metrics = Arc::new(MockMetrics::new());
     metrics.packets_forwarded.store(100, Ordering::Relaxed);
 
-    let coordinator = Arc::new(ShutdownCoordinator::new(metrics.clone(), Duration::from_millis(10)));
+    let coordinator = Arc::new(ShutdownCoordinator::new(
+        metrics.clone(),
+        Duration::from_millis(10),
+    ));
 
     // First shutdown
     let snapshot1 = coordinator.initiate_shutdown().await;
@@ -275,7 +282,10 @@ async fn test_shutdown_idempotency() {
 #[tokio::test]
 async fn test_grace_period_allows_in_flight_completion() {
     let metrics = Arc::new(MockMetrics::new());
-    let coordinator = Arc::new(ShutdownCoordinator::new(metrics.clone(), Duration::from_millis(200)));
+    let coordinator = Arc::new(ShutdownCoordinator::new(
+        metrics.clone(),
+        Duration::from_millis(200),
+    ));
 
     // Simulate in-flight work that takes 100ms
     let work_complete = Arc::new(AtomicBool::new(false));
@@ -293,7 +303,10 @@ async fn test_grace_period_allows_in_flight_completion() {
     work_task.await.unwrap();
 
     // Work should have completed during grace period
-    assert!(work_complete.load(Ordering::SeqCst), "In-flight work should complete during grace period");
+    assert!(
+        work_complete.load(Ordering::SeqCst),
+        "In-flight work should complete during grace period"
+    );
 }
 
 #[tokio::test]
@@ -308,9 +321,7 @@ async fn test_multiple_concurrent_shutdowns() {
     // Spawn 10 tasks all trying to initiate shutdown
     for _ in 0..10 {
         let coord = coordinator.clone();
-        handles.push(tokio::spawn(async move {
-            coord.initiate_shutdown().await
-        }));
+        handles.push(tokio::spawn(async move { coord.initiate_shutdown().await }));
     }
 
     // All should complete without error
@@ -348,7 +359,11 @@ async fn test_shutdown_with_no_grace_period() {
     let elapsed = start.elapsed();
 
     // With zero grace period, shutdown should be nearly instant (< 10ms)
-    assert!(elapsed < Duration::from_millis(10), "Zero grace period should be instant: {:?}", elapsed);
+    assert!(
+        elapsed < Duration::from_millis(10),
+        "Zero grace period should be instant: {:?}",
+        elapsed
+    );
 }
 
 #[tokio::test]

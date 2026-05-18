@@ -95,7 +95,7 @@ pub unsafe extern "C" fn noise_create_initiator(
     // Create NoiseHandshake (initiator)
     let handshake = match NoiseHandshake::new_initiator(
         &local_static,
-        remote_static.as_ref().map(|r| r.as_slice())
+        remote_static.as_ref().map(|r| r.as_slice()),
     ) {
         Ok(hs) => hs,
         Err(_) => return NoiseError::HandshakeFailed as c_int,
@@ -460,10 +460,7 @@ mod tests {
             );
             assert_eq!(result, NoiseError::Success as c_int);
 
-            let result = noise_create_responder(
-                responder_static.as_ptr(),
-                &mut responder,
-            );
+            let result = noise_create_responder(responder_static.as_ptr(), &mut responder);
             assert_eq!(result, NoiseError::Success as c_int);
 
             // Cleanup
