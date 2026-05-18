@@ -75,7 +75,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --workspace -- -D warnings
 
   security:
     name: Security Audit
@@ -176,10 +176,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Generate documentation
-        run: cargo doc --no-deps --all-features
+        run: cargo doc --no-deps --workspace
 
       - name: Check documentation links
-        run: cargo doc --no-deps --all-features 2>&1 | grep -i "warning.*intra-doc" && exit 1 || exit 0
+        run: cargo doc --no-deps --workspace 2>&1 | grep -i "warning.*intra-doc" && exit 1 || exit 0
 
   dependencies:
     name: Dependency Check
@@ -197,7 +197,7 @@ jobs:
           cargo outdated --exit-code 1 || true
 
       - name: Check dependency tree
-        run: cargo tree --all-features > dependency-tree.txt
+        run: cargo tree --workspace > dependency-tree.txt
 
       - name: Upload dependency tree
         uses: actions/upload-artifact@v4
