@@ -209,8 +209,7 @@ impl MpQuicFabric {
         // Le socket UDP interne est bindé sur bind_addr (ou 0.0.0.0:0 pour auto-assign).
         let endpoint = P2pEndpoint::new(p2p_config)
             .await
-            .map_err(|e| std::io::Error::new(
-                std::io::ErrorKind::Other,
+            .map_err(|e| std::io::Error::other(
                 format!("ant-quic P2pEndpoint initialization failed: {}", e)
             ))?;
 

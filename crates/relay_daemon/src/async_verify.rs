@@ -7,7 +7,6 @@
 /// - Latence <1µs du oneshot channel
 /// - Isolation parfaite des pools
 /// - Target: <100µs de vérification totale
-
 use crate::capow::{verify_gbp_solution, MtpProof};
 use rayon::ThreadPoolBuilder;
 use std::sync::OnceLock;

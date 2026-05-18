@@ -6,7 +6,6 @@
 /// - Hybrid AONT-Threshold (Shamir SSS 3-of-5 + Reed-Solomon erasure coding)
 ///
 /// Spécifications complètes: NotebookLM "FILE Project" > crypto_fabric
-
 pub mod noise;
 pub mod aont;
 

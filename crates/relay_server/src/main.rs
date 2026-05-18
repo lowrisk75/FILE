@@ -84,6 +84,7 @@ impl RelayMetrics {
 /// - Sustained rate: 10 req/s
 /// - Burst capacity: 50 requests
 #[derive(Debug)]
+#[allow(dead_code)]
 struct RateLimiter {
     tokens: f64,
     last_refill: Instant,
@@ -91,6 +92,7 @@ struct RateLimiter {
     refill_rate: f64,  // tokens per second
 }
 
+#[allow(dead_code)]
 impl RateLimiter {
     fn new(capacity: f64, refill_rate: f64) -> Self {
         Self {
@@ -178,11 +180,12 @@ impl ChallengeManager {
 
         info!(
             "🔄 Challenge rotated: new merkle_root = {}",
-            hex::encode(&new_challenge.merkle_root)
+            hex::encode(new_challenge.merkle_root)
         );
     }
 
     /// Verify proof against current or previous challenge
+    #[allow(dead_code)]
     async fn verify_challenge(&self, proof_merkle_root: &[u8; 32]) -> bool {
         // Try current challenge first
         let current = self.current.read().await;
@@ -212,6 +215,7 @@ impl ChallengeManager {
 
 /// Connected peer state
 #[derive(Debug)]
+#[allow(dead_code)]
 struct PeerState {
     peer_id: Vec<u8>,
     addr: SocketAddr,
@@ -222,6 +226,7 @@ struct PeerState {
 }
 
 /// Global relay state
+#[allow(dead_code)]
 struct RelayState {
     peers: DashMap<Vec<u8>, PeerState>,  // Lock-free concurrent access with secure hashing (SipHash)
     endpoint: Arc<P2pEndpoint>,
@@ -235,6 +240,7 @@ struct RelayState {
     metrics: RelayMetrics,  // Operational metrics (Prometheus-compatible)
 }
 
+#[allow(dead_code)]
 impl RelayState {
     fn new(
         endpoint: P2pEndpoint,
@@ -564,7 +570,7 @@ async fn challenge_handler(AxumState(state): AxumState<Arc<RelayState>>) -> impl
         .as_secs();
 
     (StatusCode::OK, Json(json!({
-        "merkle_root": hex::encode(&challenge.merkle_root),
+        "merkle_root": hex::encode(challenge.merkle_root),
         "created_at": created_at,
         "expires_at": expires_at,
     })))
@@ -773,7 +779,7 @@ async fn main() -> Result<()> {
     let current_challenge = challenge_manager.get_current().await;
     info!(
         "✅ Challenge manager initialized: merkle_root = {}",
-        hex::encode(&current_challenge.merkle_root)
+        hex::encode(current_challenge.merkle_root)
     );
 
     // Spawn challenge rotation task (rotates every hour)

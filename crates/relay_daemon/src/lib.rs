@@ -11,7 +11,6 @@
 /// - Relay: Vérifie avec 64MB + multi-proof (<100µs)
 ///
 /// Basé sur recherche "Rust PoW Asymétrique _ Recherche Approfondie.md"
-
 pub mod capow;
 pub mod async_verify;
 pub mod s3_fifo; // Phase future (Store-and-Forward)
