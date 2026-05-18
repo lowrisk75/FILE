@@ -1,0 +1,104 @@
+# Rust
+target/
+Cargo.lock  # Commenté si c'est une app finale (décommenter pour library)
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Xcode (Phase 6 - Apple)
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# NotebookLM temp files (si téléchargés localement)
+tool-results/
+*.nbml
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Test outputs
+*.log
+coverage/
+*.profraw
+*.profdata
+
+# Documentation builds
+docs/_build/
+target/doc/
+
+# Secrets (ne devrait pas exister, mais au cas où)
+*.key
+*.pem
+secrets.json
+.env
+.env.local
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# Relay Server Specific
+file-relay
+crates/relay_server/file-relay
+
+# CI/CD artifacts
+audit-report.json
+test-results.txt
+dependency-tree.txt
+licenses.json
+licenses.tsv
+outdated.json
+sbom.spdx.json
+trivy-results.sarif
+results.sarif
+
+# Deployment
+deploy/grafana/data/
+deploy/prometheus/data/
+deploy/alertmanager/data/
+*.kubeconfig
+kubeconfig
+backup-*.yaml
+
+# Docker volumes
+.docker/
+docker-compose.override.yml
+
+# Benchmarks
+criterion/
+target/criterion/
+flamegraph.svg
+perf.data
+perf.data.old

@@ -1,0 +1,413 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: file-relay-server
+  namespace: file-network
+  labels:
+    app: file-relay
+    component: relay-server
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: file-relay
+      component: relay-server
+
+  endpoints:
+  - port: health
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    scheme: http
+
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service
+
+  namespaceSelector:
+    matchNames:
+    - file-network
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: file-relay-server-alerts
+  namespace: file-network
+  labels:
+    app: file-relay
+    component: relay-server
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: file-relay-server
+    interval: 30s
+    rules:
+
+    # Alert: High peer count approaching capacity
+    - alert: FileRelayHighPeerCount
+      expr: file_relay_active_peers > 900
+      for: 5m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} has high peer count"
+        description: "Active peers ({{ $value }}) approaching max capacity (1000) on {{ $labels.pod }}"
+
+    # Alert: Peer capacity reached
+    - alert: FileRelayCapacityReached
+      expr: file_relay_active_peers >= 1000
+      for: 1m
+      labels:
+        severity: critical
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} at max capacity"
+        description: "Relay server {{ $labels.pod }} has reached maximum peer capacity (1000). New connections will be rejected."
+
+    # Alert: High CAPoW rejection rate
+    - alert: FileRelayHighCAPoWRejectionRate
+      expr: rate(file_relay_capow_rejected_total[5m]) > 10
+      for: 3m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} has high CAPoW rejection rate"
+        description: "CAPoW rejection rate ({{ $value | humanize }}/s) is elevated on {{ $labels.pod }}. Possible attack or misconfigured clients."
+
+    # Alert: Very high CAPoW rejection rate (attack)
+    - alert: FileRelayCAPoWAttack
+      expr: rate(file_relay_capow_rejected_total[1m]) > 50
+      for: 1m
+      labels:
+        severity: critical
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} under possible attack"
+        description: "CAPoW rejection rate ({{ $value | humanize }}/s) extremely high on {{ $labels.pod }}. Likely DoS attack."
+
+    # Alert: High rate limiting
+    - alert: FileRelayHighRateLimiting
+      expr: rate(file_relay_rate_limited_total[5m]) > 20
+      for: 3m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} rate limiting many requests"
+        description: "Rate limiting {{ $value | humanize }} requests/s on {{ $labels.pod }}. Possible attack or client misconfiguration."
+
+    # Alert: Very high rate limiting (attack)
+    - alert: FileRelayRateLimitAttack
+      expr: rate(file_relay_rate_limited_total[1m]) > 100
+      for: 1m
+      labels:
+        severity: critical
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} under heavy rate limit pressure"
+        description: "Rate limiting {{ $value | humanize }} requests/s on {{ $labels.pod }}. Likely DoS attack."
+
+    # Alert: Pod down
+    - alert: FileRelayServerDown
+      expr: up{job="file-relay-server"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} is down"
+        description: "Relay server {{ $labels.pod }} is not responding to health checks."
+
+    # Alert: Low packet forwarding rate (possible network issue)
+    - alert: FileRelayLowPacketRate
+      expr: rate(file_relay_packets_forwarded_total[5m]) < 1 and file_relay_active_peers > 10
+      for: 5m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} has low packet forwarding rate"
+        description: "Only {{ $value | humanize }} packets/s forwarded with {{ $labels.active_peers }} active peers. Possible network issue."
+
+    # Alert: High peer timeout rate
+    - alert: FileRelayHighPeerTimeouts
+      expr: rate(file_relay_peers_timeout_total[5m]) > 5
+      for: 3m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} has high peer timeout rate"
+        description: "{{ $value | humanize }} peers/s timing out on {{ $labels.pod }}. Possible network instability or client issues."
+
+    # Alert: No active peers (bootstrap issue)
+    - alert: FileRelayNoPeers
+      expr: file_relay_active_peers == 0
+      for: 10m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} has no active peers"
+        description: "Relay server {{ $labels.pod }} has had zero peers for 10 minutes. Check bootstrap discovery."
+
+    # Alert: High memory usage
+    - alert: FileRelayHighMemory
+      expr: container_memory_working_set_bytes{pod=~"file-relay-server-.*"} / container_spec_memory_limit_bytes{pod=~"file-relay-server-.*"} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} high memory usage"
+        description: "Memory usage at {{ $value | humanizePercentage }} of limit on {{ $labels.pod }}"
+
+    # Alert: Pod restarts
+    - alert: FileRelayFrequentRestarts
+      expr: rate(kube_pod_container_status_restarts_total{pod=~"file-relay-server-.*"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: warning
+        component: relay-server
+      annotations:
+        summary: "FILE Relay Server {{ $labels.pod }} restarting frequently"
+        description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: file-relay-grafana-dashboard
+  namespace: file-network
+  labels:
+    app: file-relay
+    component: relay-server
+    grafana_dashboard: "1"
+data:
+  file-relay-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 800},
+                  {"color": "red", "value": 950}
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "pluginVersion": "9.0.0",
+          "targets": [
+            {
+              "expr": "sum(file_relay_active_peers)",
+              "refId": "A"
+            }
+          ],
+          "title": "Active Peers",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {"type": "linear"},
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {"group": "A", "mode": "none"},
+                "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"color": "green", "value": null}]
+              },
+              "unit": "pps"
+            }
+          },
+          "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
+          "id": 2,
+          "options": {
+            "legend": {"calcs": ["mean", "lastNotNull", "max"], "displayMode": "table", "placement": "right"},
+            "tooltip": {"mode": "multi", "sort": "none"}
+          },
+          "targets": [
+            {
+              "expr": "rate(file_relay_packets_forwarded_total[1m])",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Packet Forwarding Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {"type": "linear"},
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {"group": "A", "mode": "normal"},
+                "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"color": "green", "value": null}]
+              },
+              "unit": "ops"
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "id": 3,
+          "options": {
+            "legend": {"calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "right"},
+            "tooltip": {"mode": "multi", "sort": "none"}
+          },
+          "targets": [
+            {
+              "expr": "rate(file_relay_capow_verified_total[5m])",
+              "legendFormat": "Verified - {{pod}}",
+              "refId": "A"
+            },
+            {
+              "expr": "rate(file_relay_capow_rejected_total[5m])",
+              "legendFormat": "Rejected - {{pod}}",
+              "refId": "B"
+            }
+          ],
+          "title": "CAPoW Verification Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {"tooltip": false, "viz": false, "legend": false},
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {"type": "linear"},
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {"group": "A", "mode": "none"},
+                "thresholdsStyle": {"mode": "off"}
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50}]
+              },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "id": 4,
+          "options": {
+            "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "right"},
+            "tooltip": {"mode": "multi", "sort": "none"}
+          },
+          "targets": [
+            {
+              "expr": "rate(file_relay_rate_limited_total[1m])",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Rate Limiting (requests/s)",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": ["file-network", "relay"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "timepicker": {},
+      "timezone": "",
+      "title": "FILE Relay Server",
+      "uid": "file-relay-server",
+      "version": 1
+    }

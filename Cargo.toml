@@ -1,0 +1,65 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core_transport",
+    "crates/crypto_fabric",
+    "crates/vfs_guard",
+    "crates/edge_ai",
+    "crates/relay_daemon",
+    "crates/relay_server"
+]
+
+[workspace.dependencies]
+# ==========================================
+# 1. COUCHE TRANSPORT & RÉSEAU (MPQUIC)
+# ==========================================
+# SECURITY: Pinned to exact version for reproducible builds & supply chain security
+ant-quic = "=0.14.192"
+noq = "1.0.0-rc.0"
+quinn = "0.11.9"
+socket2 = { version = "0.6.3", features = ["all"] }
+tokio = { version = "1.52.3", features = ["full"] }
+
+# ==========================================
+# 2. CRYPTOGRAPHIE & ZERO TRUST
+# ==========================================
+# SECURITY: All crypto dependencies pinned to exact versions
+snow = { version = "=0.10.0", features = ["ring-resolver", "ring-accelerated"] }
+sha3 = "=0.10"
+chacha20poly1305 = "=0.10"
+argon2 = { version = "=0.5.3", features = ["alloc", "password-hash"] }
+argon2-kdf = "1.7.1"
+arrayvec = "^0.7.4"
+
+# ==========================================
+# 3. BASE DE DONNÉES VECTORIELLE & SSE
+# ==========================================
+# cosmian_findex = "*"  # TODO: Verify availability on crates.io
+lsh-rs = "0.2.2"
+
+# ==========================================
+# 4. CRDTs & SYNCHRONISATION (RAM/IoT)
+# ==========================================
+# NOTE: Verify these crates exist or find alternatives
+# merkle-search-tree = "*"  # TODO: Find or implement
+# rs-merkle-tree = "*"  # TODO: Find or implement
+# monotree = "*"  # TODO: Find or implement
+# negentropy = "*"  # TODO: Find or implement
+
+# ==========================================
+# 5. SYSTÈME DE FICHIERS VIRTUEL (VFS)
+# ==========================================
+# NOTE: Ces crates n'existent pas encore sur crates.io
+# winfsp-rs = { version = "*", features = ["async-io"] }  # TODO: Find or implement
+# async-fusex = "*"  # TODO: Find or implement (alternative: fuser)
+
+# ==========================================
+# 6. MONITORING SYSTÈME & ANTI-DDOS
+# ==========================================
+sysinfo = { version = "0.32", features = ["system", "disk"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

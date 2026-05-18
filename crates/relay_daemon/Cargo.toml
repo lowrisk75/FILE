@@ -1,0 +1,36 @@
+[package]
+name = "relay_daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Async runtime & parallelism
+tokio = { workspace = true }
+rayon = "1.10"
+
+# Cryptography
+argon2 = { workspace = true }
+sha2 = "0.10"
+
+# Merkle Tree (MTP-Argon2)
+rs_merkle = "1.4"
+
+# ML Context Scoring
+socket2 = { workspace = true }
+maxminddb = "=0.27.0"  # SECURITY: Upgraded from 0.24 to fix RUSTSEC-2025-0132
+sysinfo = { workspace = true }
+
+# Utilities
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "capow_verify"
+harness = false
+
+[lib]
+name = "relay_daemon"
+crate-type = ["staticlib", "rlib"]

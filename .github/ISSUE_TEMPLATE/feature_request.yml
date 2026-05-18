@@ -1,0 +1,157 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in improving FILE Relay Server! Please describe your feature idea below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What use case does it enable?
+      placeholder: As a relay operator, I want to... because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work? Be as specific as possible.
+      placeholder: |
+        Add a new flag `--enable-websocket` that:
+        1. Starts a WebSocket server on port 8082
+        2. Allows peers to connect via WS in addition to QUIC
+        3. Transparently converts WS frames to MPQUIC packets
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches or solutions did you consider?
+      placeholder: |
+        Alternative 1: Use HTTP/3 instead of WebSocket
+        Alternative 2: Add a separate proxy service
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocking my use case)
+        - High (significant improvement)
+        - Medium (nice to have)
+        - Low (would be cool)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: Which area does this feature relate to?
+      options:
+        - Performance
+        - Security
+        - Monitoring / Observability
+        - Deployment / Operations
+        - API / Protocol
+        - Documentation
+        - Developer Experience
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples / Use Cases
+      description: Provide concrete examples of how this feature would be used.
+      placeholder: |
+        **Use Case 1**: Web browser clients
+        JavaScript clients could connect via WebSocket instead of requiring a native QUIC implementation.
+
+        **Use Case 2**: Firewall traversal
+        Some corporate firewalls block UDP, but allow WebSocket over HTTPS.
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Analysis
+      description: Who would benefit from this feature? What's the expected impact?
+      placeholder: |
+        - Estimated users affected: 30% of relay operators
+        - Performance impact: Minimal (WS is opt-in)
+        - Security impact: None (same authentication)
+        - Breaking changes: None
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas about how to implement this? (Optional, but helpful)
+      placeholder: |
+        1. Add `tokio-tungstenite` dependency for WebSocket
+        2. Spawn WS server in separate task
+        3. Convert WS frames to MPQUIC packets via adapter trait
+        4. Reuse existing CAPoW verification and rate limiting
+    validations:
+      required: false
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Change?
+      description: Would this require breaking changes to existing functionality?
+      options:
+        - "No - Fully backward compatible"
+        - "Maybe - Needs discussion"
+        - "Yes - Breaking change required"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Links, screenshots, mockups, or any other relevant information.
+      placeholder: |
+        Reference implementation: https://github.com/example/ws-quic-bridge
+        Similar feature in other projects: ...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to help implement this feature?
+      options:
+        - label: I am willing to submit a pull request for this feature
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched for existing feature requests
+          required: true
+        - label: This feature aligns with the project's goals
+          required: true
+        - label: I have considered the implementation complexity
+          required: true

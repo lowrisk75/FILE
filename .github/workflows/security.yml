@@ -1,0 +1,253 @@
+name: Security
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: ${{ runner.os }}-cargo-audit
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit || true
+
+      - name: Run cargo audit
+        run: cargo audit --json > audit-report.json
+
+      - name: Parse audit results
+        id: audit
+        run: |
+          VULNERABILITIES=$(cat audit-report.json | jq '.vulnerabilities.found // 0')
+          WARNINGS=$(cat audit-report.json | jq '.warnings | length // 0')
+
+          echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+
+          if [ "$VULNERABILITIES" -gt 0 ]; then
+            echo "🚨 Found $VULNERABILITIES vulnerabilities"
+            cat audit-report.json | jq '.vulnerabilities.list[]'
+          fi
+
+          if [ "$WARNINGS" -gt 0 ]; then
+            echo "⚠️ Found $WARNINGS warnings"
+            cat audit-report.json | jq '.warnings[]'
+          fi
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-audit-report
+          path: audit-report.json
+
+      - name: Create issue if vulnerabilities found
+        if: steps.audit.outputs.vulnerabilities > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const audit = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+
+            let body = '## 🚨 Security Vulnerabilities Detected\n\n';
+            body += `Found ${audit.vulnerabilities.found} vulnerabilities:\n\n`;
+
+            audit.vulnerabilities.list.forEach(vuln => {
+              body += `### ${vuln.advisory.id}: ${vuln.advisory.title}\n`;
+              body += `- **Package**: ${vuln.package.name} ${vuln.package.version}\n`;
+              body += `- **Severity**: ${vuln.advisory.cvss || 'N/A'}\n`;
+              body += `- **Patched**: ${vuln.versions.patched.join(', ') || 'No patch available'}\n`;
+              body += `- **Description**: ${vuln.advisory.description}\n`;
+              body += `- **URL**: ${vuln.advisory.url}\n\n`;
+            });
+
+            body += '\n\n---\n_Automated security scan by cargo-audit_';
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Security] ${audit.vulnerabilities.found} vulnerabilities detected`,
+              body: body,
+              labels: ['security', 'automated']
+            });
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+
+      - name: Build for CodeQL
+        run: cargo build --release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  supply-chain:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate dependency tree
+        run: cargo tree --all-features > dependency-tree.txt
+
+      - name: Check for suspicious dependencies
+        run: |
+          # Check for typosquatting (common misspellings)
+          SUSPICIOUS=(
+            "tokoi"  # tokio typo
+            "serdo"  # serde typo
+            "reqwuest"  # reqwest typo
+            "axium"  # axum typo
+          )
+
+          for dep in "${SUSPICIOUS[@]}"; do
+            if grep -qi "$dep" Cargo.lock; then
+              echo "⚠️ Suspicious dependency found: $dep"
+              exit 1
+            fi
+          done
+
+      - name: Check for deprecated crates
+        run: |
+          cargo install cargo-outdated || true
+          cargo outdated --format json > outdated.json || true
+
+          OUTDATED=$(cat outdated.json | jq '.dependencies | length // 0')
+          if [ "$OUTDATED" -gt 10 ]; then
+            echo "⚠️ $OUTDATED outdated dependencies"
+          fi
+
+      - name: Upload dependency reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-reports
+          path: |
+            dependency-tree.txt
+            outdated.json
+
+  secrets-scan:
+    name: Secrets Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-license
+        run: cargo install cargo-license || true
+
+      - name: Check licenses
+        run: |
+          cargo license --json > licenses.json
+
+          # Check for forbidden licenses
+          FORBIDDEN_LICENSES=(
+            "GPL-3.0"
+            "AGPL-3.0"
+            "SSPL"
+          )
+
+          for license in "${FORBIDDEN_LICENSES[@]}"; do
+            if grep -qi "$license" licenses.json; then
+              echo "❌ Forbidden license found: $license"
+              exit 1
+            fi
+          done
+
+          echo "✅ All licenses are compliant"
+
+      - name: Generate license report
+        run: |
+          cargo license --tsv > licenses.tsv
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: |
+            licenses.json
+            licenses.tsv
+
+  security-scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@v2
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

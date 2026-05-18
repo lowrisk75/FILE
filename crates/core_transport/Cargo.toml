@@ -1,0 +1,46 @@
+[package]
+name = "core_transport"
+version = "0.1.0"
+edition = "2021"
+
+authors = ["Kevin Nadjarian <support@lorislab.fr>"]
+description = "AORATA Protocol v2 - Core Transport Layer (MPQUIC + NAT Traversal)"
+license = "Proprietary"
+
+[dependencies]
+# MPQUIC Transport (Pure PQC: ML-KEM-768 + ML-DSA-65)
+ant-quic = "0.14.192"
+
+# Hash DoS Mitigation (SipHash-2-4 routing table)
+siphasher = "1.0.1"
+
+# Async Runtime
+tokio = { version = "1.52.3", features = ["net", "sync", "rt", "macros"] }
+
+# Random for SipHash keys + Birthday Problem port selection
+rand = "0.8.5"
+
+# Low-level Socket Configuration (NAT Hole Punching uniquement)
+# Utilisé par nat_punch.rs pour:
+#   - SO_REUSEADDR (bind rapide sur ports TIME_WAIT)
+#   - TTL manipulation (évasion IDS/IPS)
+#   - Non-blocking mode avant transition vers Tokio
+socket2 = { version = "0.5.9", features = ["all"] }
+
+# Async primitives (join_all pour parallel port spraying)
+futures = "0.3.31"
+
+# Note: socket2 n'est PAS utilisé dans mpquic.rs — ant-quic gère son socket en interne.
+# Il est UNIQUEMENT utilisé dans nat_punch.rs pour:
+#   - TTL manipulation (expiration après CGNAT, évasion IDS)
+#   - Allocation massive de sockets UDP (Birthday Problem)
+# Cf. Research #2 "Ant-quic SO_REUSEPORT NAT Hole Punching.md"
+# Cf. Research #3 "QUIC NAT Hole Punching with DCUtR.md"
+
+[dev-dependencies]
+tokio = { version = "1.52.3", features = ["full"] }
+
+[lib]
+name = "core_transport"
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]

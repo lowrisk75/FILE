@@ -1,0 +1,141 @@
+groups:
+  - name: file_relay_critical
+    interval: 30s
+    rules:
+      # Critical: Relay server down
+      - alert: FileRelayServerDown
+        expr: up{job="file-relay-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server is down"
+          description: "Relay server {{ $labels.instance }} has been down for 1 minute"
+
+      # Critical: Max capacity reached
+      - alert: FileRelayCapacityReached
+        expr: file_relay_active_peers >= 1000
+        for: 1m
+        labels:
+          severity: critical
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server at maximum capacity"
+          description: "{{ $labels.instance }} has {{ $value }} active peers (max: 1000)"
+
+      # Critical: Possible DoS attack (CAPoW rejections)
+      - alert: FileRelayCAPoWAttack
+        expr: rate(file_relay_capow_rejected_total[1m]) > 50
+        for: 1m
+        labels:
+          severity: critical
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server under possible CAPoW DoS attack"
+          description: "{{ $labels.instance }} rejecting {{ $value | humanize }} CAPoW proofs/s"
+
+      # Critical: Possible DoS attack (rate limiting)
+      - alert: FileRelayRateLimitAttack
+        expr: rate(file_relay_rate_limited_total[1m]) > 100
+        for: 1m
+        labels:
+          severity: critical
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server under heavy rate limit pressure"
+          description: "{{ $labels.instance }} rate limiting {{ $value | humanize }} requests/s"
+
+  - name: file_relay_warning
+    interval: 30s
+    rules:
+      # Warning: High peer count
+      - alert: FileRelayHighPeerCount
+        expr: file_relay_active_peers > 900
+        for: 5m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server approaching capacity"
+          description: "{{ $labels.instance }} has {{ $value }} active peers (threshold: 900)"
+
+      # Warning: Elevated CAPoW rejection rate
+      - alert: FileRelayHighCAPoWRejectionRate
+        expr: rate(file_relay_capow_rejected_total[5m]) > 10
+        for: 3m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server has elevated CAPoW rejection rate"
+          description: "{{ $labels.instance }} rejecting {{ $value | humanize }} CAPoW proofs/s"
+
+      # Warning: Elevated rate limiting
+      - alert: FileRelayHighRateLimiting
+        expr: rate(file_relay_rate_limited_total[5m]) > 20
+        for: 3m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server rate limiting many requests"
+          description: "{{ $labels.instance }} rate limiting {{ $value | humanize }} requests/s"
+
+      # Warning: High peer timeout rate
+      - alert: FileRelayHighPeerTimeouts
+        expr: rate(file_relay_peers_timeout_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server has high peer timeout rate"
+          description: "{{ $labels.instance }} timing out {{ $value | humanize }} peers/s"
+
+      # Warning: Low packet forwarding rate
+      - alert: FileRelayLowPacketRate
+        expr: rate(file_relay_packets_forwarded_total[5m]) < 1 and file_relay_active_peers > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server has unusually low packet rate"
+          description: "{{ $labels.instance }} forwarding only {{ $value | humanize }} packets/s with {{ $labels.active_peers }} peers"
+
+      # Warning: No active peers (bootstrap issue)
+      - alert: FileRelayNoPeers
+        expr: file_relay_active_peers == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: relay-server
+        annotations:
+          summary: "FILE Relay Server has no active peers"
+          description: "{{ $labels.instance }} has had zero peers for 10 minutes"
+
+  - name: file_relay_info
+    interval: 60s
+    rules:
+      # Recording rule: Total peer registrations
+      - record: file_relay:peer_registrations:total
+        expr: sum(file_relay_peers_registered_total)
+
+      # Recording rule: CAPoW success rate
+      - record: file_relay:capow_success:rate5m
+        expr: |
+          rate(file_relay_capow_verified_total[5m]) /
+          (rate(file_relay_capow_verified_total[5m]) + rate(file_relay_capow_rejected_total[5m]))
+
+      # Recording rule: Average packet rate per peer
+      - record: file_relay:packets_per_peer:rate5m
+        expr: |
+          sum(rate(file_relay_packets_forwarded_total[5m])) /
+          sum(file_relay_active_peers)
+
+      # Recording rule: Rate limiting percentage
+      - record: file_relay:rate_limited:percentage5m
+        expr: |
+          rate(file_relay_rate_limited_total[5m]) /
+          (rate(file_relay_peers_registered_total[5m]) + rate(file_relay_rate_limited_total[5m])) * 100

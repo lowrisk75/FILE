@@ -1,0 +1,45 @@
+[Unit]
+Description=FILE Relay Server - MPQUIC P2P Relay with CAPoW Anti-DDoS
+After=network-online.target
+Wants=network-online.target
+Documentation=https://github.com/yourorg/FILE
+
+[Service]
+Type=simple
+User=file-relay
+Group=file-relay
+WorkingDirectory=/opt/file-relay
+
+# Binary location
+ExecStart=/opt/file-relay/file-relay \
+    --bind 0.0.0.0:8080 \
+    --health-port 8081 \
+    --max-peers 1000 \
+    --capow \
+    --capow-timeout 60 \
+    --log-level info
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/file-relay
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Restart policy
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=file-relay
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+# FILE Relay Server - Load Testing Dependencies
+
+# HTTP client for metrics fetching
+aiohttp>=3.9.0
+
+# Optional: For advanced analysis and visualization
+# numpy>=1.24.0
+# matplotlib>=3.7.0
+# pandas>=2.0.0

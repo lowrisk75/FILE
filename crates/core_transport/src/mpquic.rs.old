@@ -1,0 +1,69 @@
+use socket2::{Socket, Domain, Type, Protocol};
+use std::net::{SocketAddr, UdpSocket};
+use tokio::net::UdpSocket as TokioUdpSocket;
+// use ant_quic::{Endpoint, ServerConfig}; // Uncomment when implementing
+
+/// Représente le nœud de transport de base gérant MPQUIC
+///
+/// Architecture:
+/// - Socket UDP partagée (SO_REUSEADDR + SO_REUSEPORT) pour NAT traversal
+/// - Connection ID (CID) 64-bit pour survie aux changements d'IP
+/// - Mobilité 0-RTT entre interfaces réseau
+///
+/// Spécifications détaillées: NotebookLM > core_transport architecture
+pub struct MpQuicFabric {
+    // pub endpoint: Endpoint,
+    pub local_addr: SocketAddr,
+}
+
+impl MpQuicFabric {
+    /// Initialise la socket avec les capacités de Multiplexage et de Hole Punching
+    ///
+    /// Étapes critiques:
+    /// 1. Création socket bas niveau (socket2) pour SO_REUSEPORT
+    /// 2. Configuration NAT traversal (simultaneous open)
+    /// 3. Passage en mode asynchrone (Tokio)
+    /// 4. Initialisation QUIC multipath
+    ///
+    /// TODO: Implémenter selon spécifications NotebookLM
+    pub fn new(bind_addr: SocketAddr) -> std::io::Result<Self> {
+        // 1. Création d'une socket bas niveau via `socket2` pour le contrôle fin
+        let domain = if bind_addr.is_ipv4() { Domain::IPV4 } else { Domain::IPV6 };
+        let socket = Socket::new(domain, Type::DGRAM, Some(Protocol::UDP))?;
+
+        // 2. Configuration critique pour le NAT Traversal (Simultaneous Open)
+        // Permet de réutiliser le port pour frapper différents pare-feux depuis le même port
+        socket.set_reuse_address(true)?;
+        #[cfg(not(windows))]
+        socket.set_reuse_port(true)?;
+
+        // 3. Application du Bind
+        socket.bind(&bind_addr.into())?;
+
+        // 4. Passage de la socket bloquante en asynchrone (Tokio)
+        socket.set_nonblocking(true)?;
+        let std_udp: UdpSocket = socket.into();
+        let _async_udp = TokioUdpSocket::from_std(std_udp)?;
+
+        // 5. TODO: Initialisation du transport QUIC multipath (ant-quic ou noq)
+        // - enable_nat_traversal(true)
+        // - enable_multipath(true)
+        // Voir NotebookLM pour l'implémentation complète
+
+        Ok(Self {
+            local_addr: bind_addr,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_socket_creation() {
+        let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+        let fabric = MpQuicFabric::new(addr);
+        assert!(fabric.is_ok());
+    }
+}

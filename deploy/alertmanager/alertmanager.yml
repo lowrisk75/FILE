@@ -1,0 +1,107 @@
+global:
+  resolve_timeout: 5m
+
+# Default notification template
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+
+  routes:
+    # Critical alerts route (immediate notification)
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Warning alerts route
+    - match:
+        severity: warning
+      receiver: 'warning'
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+
+# Inhibition rules (suppress alerts)
+inhibit_rules:
+  # Suppress warning if critical alert for same instance
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+  # Suppress capacity warning if capacity critical
+  - source_match:
+      alertname: 'FileRelayCapacityReached'
+    target_match:
+      alertname: 'FileRelayHighPeerCount'
+    equal: ['instance']
+
+  # Suppress high rejection warning if attack detected
+  - source_match:
+      alertname: 'FileRelayCAPoWAttack'
+    target_match:
+      alertname: 'FileRelayHighCAPoWRejectionRate'
+    equal: ['instance']
+
+  - source_match:
+      alertname: 'FileRelayRateLimitAttack'
+    target_match:
+      alertname: 'FileRelayHighRateLimiting'
+    equal: ['instance']
+
+# Receivers configuration
+receivers:
+  # Default receiver (logs only)
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:9999/webhook'
+        send_resolved: true
+
+  # Critical alerts (multiple channels)
+  - name: 'critical'
+    # Slack integration
+    slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_HERE'
+        channel: '#file-relay-alerts'
+        username: 'FILE Relay Alertmanager'
+        icon_emoji: ':rotating_light:'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+    # Email integration (optional)
+    # email_configs:
+    #   - to: 'ops@example.com'
+    #     from: 'alertmanager@example.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'alertmanager'
+    #     auth_password: 'PASSWORD_HERE'
+    #     headers:
+    #       Subject: '🚨 CRITICAL Alert: {{ .GroupLabels.alertname }}'
+
+    # PagerDuty integration (optional)
+    # pagerduty_configs:
+    #   - service_key: 'PAGERDUTY_SERVICE_KEY_HERE'
+    #     severity: 'critical'
+
+  # Warning alerts (Slack only)
+  - name: 'warning'
+    slack_configs:
+      - api_url: 'SLACK_WEBHOOK_URL_HERE'
+        channel: '#file-relay-alerts'
+        username: 'FILE Relay Alertmanager'
+        icon_emoji: ':warning:'
+        title: '⚠️ Warning: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'

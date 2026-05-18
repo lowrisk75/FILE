@@ -1,0 +1,155 @@
+# FILE Relay Server - AWS Terraform Configuration
+# Copy this file to terraform.tfvars and customize
+
+# ===========================
+# AWS Configuration
+# ===========================
+
+aws_region  = "us-east-1"
+environment = "production"
+
+# ===========================
+# Project Configuration
+# ===========================
+
+project_name = "file-relay"
+
+# ===========================
+# Network Configuration
+# ===========================
+
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# ===========================
+# EKS Cluster Configuration
+# ===========================
+
+cluster_version = "1.28"
+
+# Node configuration
+node_instance_types = ["t3.medium"]  # or ["t3.small"] for cost savings
+node_desired_size   = 3              # Start with 3 nodes
+node_min_size       = 3              # Minimum for HA
+node_max_size       = 10             # Maximum for autoscaling
+node_disk_size      = 20             # GB
+
+# ===========================
+# FILE Relay Server
+# ===========================
+
+relay_image_repository = "ghcr.io/file-network/relay-server"
+relay_image_tag        = "latest"  # or "v0.1.0" for pinned version
+
+relay_replicas = 3      # Start with 3 replicas
+relay_max_peers = 1000  # Max peers per instance
+
+# Resource limits
+relay_cpu_request    = "100m"
+relay_cpu_limit      = "1000m"
+relay_memory_request = "128Mi"
+relay_memory_limit   = "512Mi"
+
+# Ports
+relay_port         = 8080
+relay_metrics_port = 8081
+
+# ===========================
+# Horizontal Pod Autoscaler
+# ===========================
+
+hpa_enabled          = true
+hpa_min_replicas     = 3
+hpa_max_replicas     = 10
+hpa_target_cpu       = 70  # Target 70% CPU utilization
+hpa_target_memory    = 80  # Target 80% memory utilization
+
+# ===========================
+# Monitoring
+# ===========================
+
+monitoring_enabled = true
+
+prometheus_retention     = "30d"
+prometheus_storage_size  = "50Gi"
+
+# REQUIRED: Set a strong password (min 8 characters)
+grafana_admin_password = "ChangeMe123!"
+
+# ===========================
+# Alerting
+# ===========================
+
+alertmanager_enabled = true
+
+# Optional: Slack alerts
+# Get webhook from: https://api.slack.com/messaging/webhooks
+alert_slack_webhook_url = ""
+
+# Optional: PagerDuty alerts (critical only)
+# Get key from: https://support.pagerduty.com/docs/services-and-integrations
+alert_pagerduty_service_key = ""
+
+# ===========================
+# Tags
+# ===========================
+
+tags = {
+  Owner       = "DevOps Team"
+  CostCenter  = "Infrastructure"
+  Backup      = "true"
+  Compliance  = "GDPR"
+}
+
+# ===========================
+# Environment-Specific Examples
+# ===========================
+
+# PRODUCTION
+# ----------
+# environment         = "production"
+# node_desired_size   = 3
+# relay_replicas      = 3
+# hpa_min_replicas    = 3
+# hpa_max_replicas    = 10
+# monitoring_enabled  = true
+
+# STAGING
+# -------
+# environment         = "staging"
+# node_desired_size   = 2
+# relay_replicas      = 2
+# hpa_min_replicas    = 2
+# hpa_max_replicas    = 5
+# monitoring_enabled  = true
+
+# DEVELOPMENT
+# -----------
+# environment         = "development"
+# node_desired_size   = 1
+# relay_replicas      = 1
+# hpa_min_replicas    = 1
+# hpa_max_replicas    = 3
+# monitoring_enabled  = false  # Save cost
+
+# ===========================
+# Cost Optimization Tips
+# ===========================
+
+# 1. Use Spot Instances (50-70% discount):
+#    In eks.tf, set: capacity_type = "SPOT"
+#
+# 2. Single NAT Gateway (non-production):
+#    In main.tf, set: single_nat_gateway = true
+#    Saves: ~$64/month
+#
+# 3. Smaller instance types:
+#    node_instance_types = ["t3.small"]
+#    Saves: ~$15/month per node
+#
+# 4. Disable monitoring (dev only):
+#    monitoring_enabled = false
+#    Saves: ~$10/month
+#
+# 5. Reserved Instances (1-year commit):
+#    40% discount via AWS console

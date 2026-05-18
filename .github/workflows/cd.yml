@@ -1,0 +1,298 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deploy/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+  scan-image:
+    name: Security Scan Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy with high/critical only
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }}
+          severity: 'HIGH,CRITICAL'
+          exit-code: 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push, scan-image]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: staging
+      url: https://relay-staging.file-network.example
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_STAGING }}
+
+      - name: Deploy to staging
+        run: |
+          kubectl set image deployment/file-relay-server \
+            relay-server=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }} \
+            -n file-network-staging
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/file-relay-server \
+            -n file-network-staging \
+            --timeout=5m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n file-network-staging -l app=file-relay
+          kubectl get svc -n file-network-staging file-relay-server
+
+      - name: Run smoke tests
+        run: |
+          RELAY_IP=$(kubectl get svc file-relay-server -n file-network-staging -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f http://${RELAY_IP}:8081/health || exit 1
+          curl -f http://${RELAY_IP}:8081/ready || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, scan-image, deploy-staging]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: production
+      url: https://relay.file-network.example
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_PRODUCTION }}
+
+      - name: Create deployment backup
+        run: |
+          kubectl get deployment file-relay-server -n file-network -o yaml > backup-deployment.yaml
+
+      - name: Upload backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-backup
+          path: backup-deployment.yaml
+
+      - name: Deploy to production (canary)
+        run: |
+          # Deploy canary (1 pod with new version)
+          kubectl set image deployment/file-relay-server \
+            relay-server=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }} \
+            -n file-network
+
+          # Scale to 1 replica temporarily
+          kubectl scale deployment file-relay-server --replicas=1 -n file-network
+
+      - name: Wait for canary pod
+        run: |
+          kubectl rollout status deployment/file-relay-server \
+            -n file-network \
+            --timeout=5m
+
+      - name: Canary smoke tests
+        run: |
+          sleep 30
+          RELAY_IP=$(kubectl get svc file-relay-server -n file-network -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f http://${RELAY_IP}:8081/health || exit 1
+          curl -f http://${RELAY_IP}:8081/ready || exit 1
+
+          # Check metrics for errors
+          curl -s http://${RELAY_IP}:8081/metrics | grep -q file_relay_active_peers || exit 1
+
+      - name: Monitor canary (5 minutes)
+        run: |
+          echo "Monitoring canary for 5 minutes..."
+          sleep 300
+
+          # Check error rate
+          RELAY_IP=$(kubectl get svc file-relay-server -n file-network -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -s http://${RELAY_IP}:8081/metrics | tee metrics.txt
+
+          # Verify no crashes
+          kubectl get pods -n file-network -l app=file-relay
+
+      - name: Full rollout
+        run: |
+          # Scale back to 3 replicas (gradual rollout continues)
+          kubectl scale deployment file-relay-server --replicas=3 -n file-network
+
+          kubectl rollout status deployment/file-relay-server \
+            -n file-network \
+            --timeout=10m
+
+      - name: Verify production deployment
+        run: |
+          kubectl get pods -n file-network -l app=file-relay
+          kubectl get svc -n file-network file-relay-server
+
+          # Final health check
+          RELAY_IP=$(kubectl get svc file-relay-server -n file-network -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f http://${RELAY_IP}:8081/health || exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          kubectl rollout undo deployment/file-relay-server -n file-network
+          kubectl rollout status deployment/file-relay-server -n file-network
+
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "✅ Production deployment successful"
+          echo "Version: ${{ needs.build-and-push.outputs.version }}"
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-production]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git describe --abbrev=0 --tags ${VERSION}^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${VERSION})
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${PREV_TAG}..${VERSION})
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## FILE Relay Server ${{ github.ref_name }}
+
+            ### Changes
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### Docker Image
+            ```
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.version }}
+            ```
+
+            ### Deployment
+            See [DEPLOYMENT-GUIDE.md](docs/deployment/DEPLOYMENT-GUIDE.md) for deployment instructions.
+
+            ### Documentation
+            - [Deployment Guide](docs/deployment/DEPLOYMENT-GUIDE.md)
+            - [Operations Runbook](docs/deployment/OPERATIONS-RUNBOOK.md)
+            - [Security Audit](docs/security/Supply-Chain-Audit-2026-05-18.md)
+          draft: false
+          prerelease: false

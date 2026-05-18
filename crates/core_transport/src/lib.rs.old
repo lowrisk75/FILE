@@ -1,0 +1,13 @@
+/// Module core_transport - Multipath QUIC & NAT Traversal
+///
+/// Ce module implémente la fondation réseau Zero Trust basée sur:
+/// - MPQUIC (Multipath QUIC) pour la mobilité 0-RTT (Wi-Fi/5G/Ethernet)
+/// - NAT Hole Punching natif via extensions QUIC (draft-seemann)
+///
+/// Spécifications complètes disponibles via NotebookLM "FILE Project"
+
+pub mod mpquic;
+pub mod nat_punch;
+
+pub use mpquic::MpQuicFabric;
+pub use nat_punch::QuicNatPuncher;

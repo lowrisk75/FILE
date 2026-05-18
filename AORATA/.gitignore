@@ -1,0 +1,65 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods (if used)
+Pods/
+*.xcworkspace
+Podfile.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Xcode Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Build
+*.swiftmodule
+*.swiftdoc
+
+# Provisioning
+*.mobileprovision
+*.provisionprofile
+
+# App Sandbox
+*.app/
+
+# Rust build artifacts (in RustCore symlink)
+# Handled by parent .gitignore
+
+# Test results
+*.xcresult/
+
+# Secrets
+*.key
+*.pem
+.env
+.env.local
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak

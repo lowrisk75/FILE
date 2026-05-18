@@ -1,0 +1,26 @@
+{
+  "name": "AORATA Protocol v2",
+  "short_name": "AORATA",
+  "description": "Zero Trust Asynchronous Transport Fabric — Security beyond the visible spectrum",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A1A1A",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

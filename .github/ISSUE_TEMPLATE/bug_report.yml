@@ -1,0 +1,139 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: The relay server crashes when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Start relay server with `cargo run -- --bind 0.0.0.0:8080`
+        2. Send CAPoW proof with difficulty 20
+        3. Observe crash in logs
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+      placeholder: The server should verify the proof and accept the connection.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened.
+      placeholder: The server panicked with "thread 'main' panicked at..."
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Relay Server Version
+      description: Which version are you running?
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: Which OS are you running on?
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust Version
+      description: Output of `rustc --version`
+      placeholder: "rustc 1.83.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Please copy and paste any relevant log output.
+      render: shell
+      placeholder: |
+        2026-05-18T10:30:45Z ERROR relay_server: CAPoW verification failed
+        thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value'
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Command-line arguments or environment variables used.
+      render: shell
+      placeholder: |
+        file-relay --bind 0.0.0.0:8080 --max-peers 1000 --capow-timeout 100
+        RUST_LOG=debug
+    validations:
+      required: false
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Type
+      description: How are you running the relay server?
+      options:
+        - Bare metal / VM
+        - Docker
+        - Docker Compose
+        - Kubernetes
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be relevant.
+      placeholder: This started happening after upgrading from 0.0.9 to 0.1.0
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched for existing issues
+          required: true
+        - label: I have read the documentation
+          required: true
+        - label: This is not a security vulnerability (use security@file-network.example for those)
+          required: true

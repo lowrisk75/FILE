@@ -1,0 +1,148 @@
+# Production Kubernetes deployment values
+# This example demonstrates production-grade configuration with:
+# - High availability (3 replicas)
+# - Resource limits and requests
+# - Horizontal autoscaling
+# - Pod disruption budget
+# - Security hardening
+# - Monitoring integration
+
+replicaCount: 3
+
+image:
+  repository: ghcr.io/file-network/relay-server
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: "file-relay-server"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "file-relay-server"
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8081"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  relay:
+    type: LoadBalancer
+    port: 8080
+    protocol: UDP
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+  metrics:
+    type: ClusterIP
+    port: 8081
+    protocol: TCP
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  customMetrics:
+    - type: Pods
+      pods:
+        metric:
+          name: file_relay_active_peers
+        target:
+          type: AverageValue
+          averageValue: "900"
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - file-relay-server
+          topologyKey: kubernetes.io/hostname
+
+env:
+  - name: RUST_LOG
+    value: "info"
+  - name: MAX_PEERS
+    value: "1000"
+  - name: METRICS_ADDR
+    value: "0.0.0.0:8081"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8081
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    labels:
+      release: prometheus-operator
+
+  prometheusRule:
+    enabled: true
+    labels:
+      release: prometheus-operator
+
+  grafanaDashboard:
+    enabled: true
+    labels:
+      grafana_dashboard: "1"

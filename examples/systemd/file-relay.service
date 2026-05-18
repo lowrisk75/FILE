@@ -1,0 +1,76 @@
+[Unit]
+Description=FILE Relay Server
+Documentation=https://github.com/file-network/relay-server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=file-relay
+Group=file-relay
+
+# Binary location (adjust to your installation path)
+ExecStart=/usr/local/bin/file-relay
+
+# Environment variables
+Environment="RUST_LOG=info"
+Environment="MAX_PEERS=1000"
+Environment="METRICS_ADDR=0.0.0.0:8081"
+
+# Working directory
+WorkingDirectory=/var/lib/file-relay
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=200s
+StartLimitBurst=5
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+TasksMax=4096
+
+# CPU and memory limits (requires systemd 239+)
+CPUQuota=200%
+MemoryMax=2G
+MemoryHigh=1.5G
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/file-relay
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+PrivateMounts=true
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelLogs=true
+ProtectProc=invisible
+ProcSubset=pid
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=file-relay
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,86 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Documentation
+docs/
+*.md
+!README.md
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts (will be built in container)
+target/
+**/*.rs.bk
+*.pdb
+
+# Tests
+tests/
+coverage/
+*.profraw
+*.profdata
+
+# Deployment configs (not needed in image)
+deploy/kubernetes/
+deploy/prometheus/
+deploy/alertmanager/
+deploy/grafana/
+deploy/docker-compose.yaml
+
+# Docker itself
+Dockerfile
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets should never be in image)
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# CI artifacts
+audit-report.json
+test-results.txt
+dependency-tree.txt
+licenses.json
+sbom.spdx.json
+trivy-results.sarif
+
+# Apple platform (not relevant for relay server)
+apple_platform/
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# NotebookLM
+tool-results/
+*.nbml
+
+# Keep only what's needed for build
+!Cargo.toml
+!Cargo.lock
+!crates/

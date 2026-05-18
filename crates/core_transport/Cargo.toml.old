@@ -1,0 +1,11 @@
+[package]
+name = "core_transport"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ant-quic = { workspace = true }
+noq = { workspace = true }
+quinn = { workspace = true }
+socket2 = { workspace = true }
+tokio = { workspace = true }

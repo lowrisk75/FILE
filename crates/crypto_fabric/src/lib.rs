@@ -1,0 +1,17 @@
+/// Module crypto_fabric - Zero Trust Cryptography
+///
+/// Implémente les primitives cryptographiques:
+/// - Noise Framework XXfallback (authentification 0-RTT avec fallback gracieux)
+/// - AONT (All-Or-Nothing Transform) pour fragmentation asynchrone
+/// - Hybrid AONT-Threshold (Shamir SSS 3-of-5 + Reed-Solomon erasure coding)
+///
+/// Spécifications complètes: NotebookLM "FILE Project" > crypto_fabric
+
+pub mod noise;
+pub mod aont;
+
+pub use noise::{NoiseHandshake, Transport};
+pub use aont::{MPQUICPathPacket, apply_aont_32bytes, encode_aorata_message};
+
+// FFI exports for Swift/Objective-C
+pub mod ffi;

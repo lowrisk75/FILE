@@ -1,0 +1,29 @@
+[Unit]
+Description=FILE Relay Server - Zero Trust P2P MPQUIC Relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=file
+Group=file
+WorkingDirectory=/opt/file-relay
+ExecStart=/opt/file-relay/file-relay --bind 0.0.0.0:8080 --log-level info
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/file-relay
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=512
+
+[Install]
+WantedBy=multi-user.target

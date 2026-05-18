@@ -1,0 +1,41 @@
+[package]
+name = "crypto_fabric"
+version = "0.1.0"
+edition = "2021"
+
+authors = ["Kevin Nadjarian <support@lorislab.fr>"]
+description = "AORATA Protocol v2 - Crypto Fabric (Noise XXfallback + Hybrid AONT)"
+license = "Proprietary"
+
+[dependencies]
+# Noise Protocol Framework (WireGuard, WhatsApp)
+# Suite: Noise_XXfallback_25519_ChaChaPoly_SHA256
+# - X25519 (ECDH)
+# - ChaCha20-Poly1305 (AEAD)
+# - SHA-256 (HKDF)
+snow = "0.10.0"
+
+# Atomic nonce management (prevents nonce reuse in async multi-path)
+# AtomicU64 with SeqCst ordering
+# No additional dependency needed (std::sync::atomic)
+
+# Hybrid AONT-Threshold (Phase 2 Prompt #5)
+# Shamir Secret Sharing (3-of-5 threshold)
+sharks = "0.5.0"
+# ChaCha8Rng for RUSTSEC-2024-0398 mitigation (SSS coefficient bias)
+rand_chacha = "0.3.1"
+rand_core = "0.6.4"
+# Reed-Solomon erasure coding (3 data + 2 parity shards)
+reed-solomon-erasure = "6.0.0"
+# Parallel processing for bulk encoding
+rayon = "1.10.0"
+# SHA-256 for AONT Feistel network
+sha2 = "0.10.8"
+
+[dev-dependencies]
+tokio = { version = "1.52.3", features = ["full"] }
+
+[lib]
+name = "crypto_fabric"
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]

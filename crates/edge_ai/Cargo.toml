@@ -1,0 +1,62 @@
+[package]
+name = "edge_ai"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Objective-C runtime FFI for private ANE API access (Tier 2 only)
+objc = { version = "0.2", optional = true }
+objc-foundation = { version = "0.1", optional = true }
+
+# Metal framework bindings for zero-copy GPU integration (Tier 2 only)
+metal = { version = "0.30", optional = true }
+core-foundation = { version = "0.10", optional = true }
+
+# System calls for mmap memory allocation (Tier 2 only)
+libc = "0.2"
+
+# Numerical types
+half = { version = "2.4", features = ["serde"] }  # fp16 support
+
+# Error handling
+thiserror = "2.0"
+
+# Async runtime + Unix sockets for ANE Helper IPC
+tokio = { version = "1.52", features = ["sync", "net", "io-util", "rt", "time"], optional = true }
+async-trait = "0.1"
+
+# Serialization for Helper communication
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+
+# Android JNI bindings (Tier 3 only)
+jni = { version = "0.21", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tokio = { version = "1.52", features = ["macros", "rt-multi-thread"] }
+
+[features]
+# Tier 1: Core ML baseline (App Store iOS/macOS)
+tier1-coreml = []
+
+# Tier 2: ANE Helper client (macOS direct download)
+tier2-ane-helper = ["tokio", "objc", "objc-foundation", "metal", "core-foundation"]
+
+# Tier 3: Android NNAPI/Hexagon
+tier3-android = ["jni"]
+
+# Default: Tier 1 + Tier 2 (macOS app complète)
+default = ["tier1-coreml", "tier2-ane-helper"]
+
+# Legacy async flag (now included in tier2)
+async = ["tokio"]
+
+# [[bench]]
+# name = "ane_routing_bench"
+# harness = false
+
+[lib]
+name = "edge_ai"
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]

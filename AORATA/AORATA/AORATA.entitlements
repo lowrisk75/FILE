@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Groups for IPC mmap between app and Network Extension -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.lorislab.aorata</string>
+	</array>
+
+	<!-- Network Extensions capability -->
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>packet-tunnel-provider</string>
+	</array>
+
+	<!-- Keychain sharing for secure credential storage -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.lorislab.aorata</string>
+	</array>
+
+	<!-- Background modes (if needed for network monitoring) -->
+	<!-- Uncomment if needed:
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:aorata.io</string>
+	</array>
+	-->
+</dict>
+</plist>
