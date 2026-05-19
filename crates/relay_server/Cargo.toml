@@ -51,3 +51,5 @@ rand = "0.8"
 # HTTP health check / metrics endpoint
 axum = "0.7"
 tower = "0.4"
+reqwest = { version = "0.12", features = ["json"] }  # For test client HTTP requests
+chrono = "0.4"  # For timestamp formatting in examples
