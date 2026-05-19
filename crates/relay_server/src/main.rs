@@ -59,12 +59,17 @@ struct Args {
 /// Relay metrics (Prometheus-compatible counters)
 #[derive(Debug)]
 struct RelayMetrics {
-    peers_registered: AtomicU64,  // Total peers ever registered
-    capow_verified: AtomicU64,    // Total CAPoW proofs successfully verified
-    capow_rejected: AtomicU64,    // Total CAPoW proofs rejected (replay/invalid)
-    rate_limited: AtomicU64,      // Total requests rate-limited
-    packets_forwarded: AtomicU64, // Total packets successfully forwarded
-    peers_timeout: AtomicU64,     // Total peers removed due to timeout
+    peers_registered: AtomicU64,   // Total peers ever registered
+    capow_verified: AtomicU64,     // Total CAPoW proofs successfully verified
+    capow_rejected: AtomicU64,     // Total CAPoW proofs rejected (replay/invalid)
+    rate_limited: AtomicU64,       // Total requests rate-limited
+    packets_forwarded: AtomicU64,  // Total packets successfully forwarded
+    peers_timeout: AtomicU64,      // Total peers removed due to timeout
+
+    // Advanced metrics (NotebookLM recommendations)
+    nat_punch_success: AtomicU64,  // Successful NAT hole-punch (PUNCH_ME_NOW frames)
+    nat_fallback_masque: AtomicU64,// MASQUE proxy fallback activations
+    capow_difficulty_last: AtomicU64, // Last CAPoW difficulty level (Score Φ)
 }
 
 impl RelayMetrics {
@@ -76,6 +81,9 @@ impl RelayMetrics {
             rate_limited: AtomicU64::new(0),
             packets_forwarded: AtomicU64::new(0),
             peers_timeout: AtomicU64::new(0),
+            nat_punch_success: AtomicU64::new(0),
+            nat_fallback_masque: AtomicU64::new(0),
+            capow_difficulty_last: AtomicU64::new(0),
         }
     }
 }
@@ -537,6 +545,11 @@ async fn metrics_handler(AxumState(state): AxumState<Arc<RelayState>>) -> impl I
     let packets_forwarded = state.metrics.packets_forwarded.load(Ordering::Relaxed);
     let peers_timeout = state.metrics.peers_timeout.load(Ordering::Relaxed);
 
+    // Advanced metrics (NotebookLM recommendations)
+    let nat_punch_success = state.metrics.nat_punch_success.load(Ordering::Relaxed);
+    let nat_fallback_masque = state.metrics.nat_fallback_masque.load(Ordering::Relaxed);
+    let capow_difficulty = state.metrics.capow_difficulty_last.load(Ordering::Relaxed);
+
     // Prometheus text format
     let metrics = format!(
         "# HELP file_relay_active_peers Current number of connected peers\n\
@@ -565,14 +578,29 @@ async fn metrics_handler(AxumState(state): AxumState<Arc<RelayState>>) -> impl I
          \n\
          # HELP file_relay_peers_timeout_total Total peers removed due to idle timeout\n\
          # TYPE file_relay_peers_timeout_total counter\n\
-         file_relay_peers_timeout_total {}\n",
+         file_relay_peers_timeout_total {}\n\
+         \n\
+         # HELP file_relay_nat_punch_success_total Successful NAT hole-punch operations (PUNCH_ME_NOW)\n\
+         # TYPE file_relay_nat_punch_success_total counter\n\
+         file_relay_nat_punch_success_total {}\n\
+         \n\
+         # HELP file_relay_nat_fallback_masque_total MASQUE proxy fallback activations\n\
+         # TYPE file_relay_nat_fallback_masque_total counter\n\
+         file_relay_nat_fallback_masque_total {}\n\
+         \n\
+         # HELP file_relay_capow_difficulty_level Current CAPoW difficulty (Score Φ)\n\
+         # TYPE file_relay_capow_difficulty_level gauge\n\
+         file_relay_capow_difficulty_level {}\n",
         active_peers,
         peers_registered,
         capow_verified,
         capow_rejected,
         rate_limited,
         packets_forwarded,
-        peers_timeout
+        peers_timeout,
+        nat_punch_success,
+        nat_fallback_masque,
+        capow_difficulty
     );
 
     (StatusCode::OK, metrics)
