@@ -1,0 +1,31 @@
+# Gitleaks configuration for FILE project
+# Reference: https://github.com/gitleaks/gitleaks
+
+[allowlist]
+# Allowlist legitimate code patterns that trigger false positives
+
+# Ignore test function names and documentation that mention cryptographic functions
+paths = [
+    # Documentation files that reference private APIs and crypto concepts
+    "(?i)(AORATA|Research|DEEP_SEARCH|PHASE_6|INTEGRATION_GUIDE)\\.md$",
+    "(?i)noise.*protocol.*impl.*\\.md$",
+    "(?i)ane.*\.md$",
+    # Test files that use fixed test keys
+    "(?i).*_tests?\\.rs$",
+    "(?i).*test.*\\.rs$",
+]
+
+# Ignore specific patterns that are not secrets
+regexes = [
+    # Ignore references to local_private_key (cryptographic function names, not actual keys)
+    "local_private_key",
+    # Ignore fixed_ephemeral_key_for_testing (test-only function, not actual keys)
+    "fixed_ephemeral_key_for_testing",
+    # Ignore ANE private API references (framework names, not credentials)
+    "_ANE",
+    "_ane",
+    "com\\.apple\\.aned",
+]
+
+# Commits to allowlist (if there's a specific commit with a false positive)
+commits = []
